@@ -1,0 +1,1035 @@
+<title>剧情核心工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 布局：和导演界面 UI-7 同一套——单栏卷轴，页首放这一集的核心和四个阶段，吸顶页签＋跳转，正文是按段排的卡片和按秒的表 */
+:root{
+  --bg:#eef1ee; --surface:#fbfcfa; --sunk:#e3e8e3; --ink:#1b211e; --muted:#58645d; --line:#cdd5cf;
+  --gold:#8a5f0e; --gold-soft:#f1e3c4; --jade:#2f6450; --jade-soft:#d9e9e0;
+  --warn-bg:#fbe7d6; --warn-ink:#8a3b0c; --shadow:rgba(27,33,30,.18);
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111513; --surface:#181d1a; --sunk:#202723; --ink:#e4eae6; --muted:#9aa79f; --line:#2d3631;
+  --gold:#d9b25c; --gold-soft:#3a2f17; --jade:#8cc3a8; --jade-soft:#1d3329; --warn-bg:#3d2616; --warn-ink:#f2b88d; --shadow:rgba(0,0,0,.55); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513; --surface:#181d1a; --sunk:#202723; --ink:#e4eae6; --muted:#9aa79f; --line:#2d3631;
+  --gold:#d9b25c; --gold-soft:#3a2f17; --jade:#8cc3a8; --jade-soft:#1d3329; --warn-bg:#3d2616; --warn-ink:#f2b88d; --shadow:rgba(0,0,0,.55); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.7}
+.wrap{max-width:1000px;margin:0 auto;padding:28px max(20px,env(safe-area-inset-right,0px)) 64px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:26px}
+@media (max-width:520px){.wrap{padding-inline:16px}}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sp{flex:1 1 auto}
+.muted{color:var(--muted)}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.note{margin:0;font-size:13px;color:var(--muted);max-width:72ch}
+.code{font-family:var(--f-mono);font-size:12px;color:var(--gold);margin-right:6px;white-space:nowrap}
+
+/* 按钮：和导演界面一样，主按钮实心墨绿，次按钮描边 */
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:34px;font-size:13.5px;font-weight:500;padding:5px 12px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.pri{background:var(--jade);border-color:var(--jade);color:var(--surface)}
+.btn.pri:hover{filter:brightness(1.08);color:var(--surface)}
+.btn.out{background:none;border-color:var(--jade);color:var(--jade)}
+.btn.out:hover{background:var(--surface)}
+.btn.sm{min-height:30px;font-size:13px;padding:3px 10px}
+.lnk{font-size:13px;padding:3px 10px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.lnk:hover{border-color:var(--gold);color:var(--gold)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;max-width:100%}
+.tag.ok{color:var(--jade);border-color:var(--jade);background:var(--jade-soft)}
+.tag.wait{color:var(--gold);border-color:var(--gold)}
+.tag.warn{color:var(--warn-ink);border-color:var(--warn-ink);background:var(--warn-bg)}
+.tag.dash{border-style:dashed}
+.tag b{font-weight:700}
+.spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--jade-soft);border-top-color:var(--jade);animation:sp 1s linear infinite;vertical-align:-1px;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--line)}
+.dot.done{background:var(--jade)}
+.dot.wait{background:var(--gold);box-shadow:0 0 0 3px var(--gold-soft)}
+.dot.run{background:none;border:2px solid var(--jade);width:10px;height:10px}
+.dot.stale{background:none;border:1.5px dashed var(--gold);width:10px;height:10px}
+
+/* 页首 */
+.mast{display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:700}
+h1{font-size:clamp(28px,5.6vw,44px);font-weight:800;letter-spacing:.04em}
+.core{display:flex;flex-direction:column;gap:10px;padding:18px 20px 16px;background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--ink);border-radius:4px 4px 10px 10px}
+.core .lab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.06em}
+.coretext{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(20px,3.1vw,27px);line-height:1.65;max-width:34em}
+.coretext.empty{color:var(--muted);font-size:18px}
+.lede{max-width:70ch;color:var(--muted);margin:0}
+.lede b{color:var(--ink)}
+.arc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.arc{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.arc{gap:8px}.stage{padding:10px 12px}.stage .l{display:none}.stage .n{font-size:15.5px}}
+.stage{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);text-align:left;cursor:pointer;min-width:0}
+.stage:hover{border-color:var(--gold)}
+.stage.on{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.stage .n .tag{margin-left:auto;font-family:var(--f-body);font-weight:500}
+.stage .n{display:flex;align-items:baseline;gap:8px;font-family:var(--f-display);font-weight:800;font-size:17px}
+.stage .n i{font-style:normal;font-family:var(--f-mono);font-weight:500;font-size:12px;color:var(--muted)}
+.stage .d{font-family:var(--f-mono);font-size:12px;color:var(--gold);overflow-wrap:anywhere}
+.stage.done .d{color:var(--jade)}
+.stage .nodes{display:flex;flex-direction:column;gap:1px;font-size:13px}
+.stage .nodes span{display:flex;align-items:center;gap:8px}
+.stage .nodes .todo{color:var(--muted)}
+.stage .l{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+.mrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+details.vlog{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.vlog>summary{cursor:pointer;padding:8px 12px;font-size:13px;color:var(--muted)}
+details.vlog ul{list-style:none;margin:0;padding:0 12px 10px;display:flex;flex-direction:column}
+details.vlog li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+details.vlog li b{font-family:var(--f-mono);font-weight:500;color:var(--gold);min-width:2.6em}
+details.vlog li .lb{flex:1 1 220px;min-width:0}
+details.vlog li .tm{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+/* 吸顶栏：页签 + 跳转 */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.views{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);flex:none;max-width:100%;overflow-x:auto}
+.views button{position:relative;font-size:13.5px;font-weight:500;padding:5px 12px;border:0;background:none;color:var(--muted);cursor:pointer;white-space:nowrap}
+.views button+button{border-left:1px solid var(--line)}
+.views button[aria-selected="true"]{background:var(--ink);color:var(--surface)}
+.views .bd{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-left:6px;vertical-align:2px}
+.runbar{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--jade);background:var(--jade-soft);border-radius:999px;padding:2px 4px 2px 12px;max-width:100%}
+.runbar #liveN{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mtop{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;justify-content:space-between}
+.quick{display:flex;gap:6px;flex:none;align-items:center;flex-wrap:wrap}
+select.proj{font-size:13px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);max-width:240px;min-height:30px}
+.jump{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%;order:3;padding-block:2px}
+@media (max-width:720px){.jump{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}.jump::-webkit-scrollbar{display:none}}
+.jump a{flex:none;font-size:13px;padding:3px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;background:var(--surface);display:inline-flex;align-items:center;gap:6px}
+.jump a.mono{font-family:var(--f-mono)}
+.jump a:hover{border-color:var(--gold);color:var(--gold)}
+.jump a[aria-current="true"]{background:var(--jade);border-color:var(--jade);color:var(--surface)}
+.jump a .mk{font-family:var(--f-body);font-size:11px}
+.jump a.ok .mk{color:var(--jade)} .jump a.wait .mk{color:var(--gold)} .jump a.stale .mk{color:var(--warn-ink)}
+.jump a[aria-current="true"] .mk{color:var(--surface)}
+
+/* 左侧细刻度目录（同导演界面） */
+.rail{position:fixed;left:calc(env(safe-area-inset-left,0px) + 4px);top:55%;transform:translateY(-50%);z-index:6;width:18px;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;gap:2px;padding:6px 2px;border:1px solid transparent;border-radius:8px}
+.rail a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--muted);font-size:12.5px;white-space:nowrap;min-height:9px;line-height:1.2}
+.rail i{flex:none;display:block;width:9px;height:2px;border-radius:1px;background:var(--line)}
+.rail a[aria-current="true"] i{background:var(--gold);height:3px;width:13px}
+.rail a[aria-current="true"]{color:var(--gold)}
+.rail span{display:none}
+.rail:hover,.rail:focus-within{width:230px;overflow-y:auto;background:var(--surface);border-color:var(--line);box-shadow:0 10px 28px -8px var(--shadow);padding:8px}
+.rail:hover a,.rail:focus-within a{min-height:24px}
+.rail:hover span,.rail:focus-within span{display:block;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:1100px){.rail{display:none}}
+
+/* 正文 */
+.view{display:flex;flex-direction:column;gap:34px;min-width:0}
+.ephead{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--ink);padding-top:14px}
+.ephead h2{font-size:24px;font-weight:800}
+.ephead .meta{font-family:var(--f-mono);font-size:12px;color:var(--gold)}
+.ephead p{margin:0;color:var(--muted);max-width:72ch;font-size:14px}
+.ephead .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0;scroll-margin-top:calc(var(--barh,96px) + 12px)}
+.sh{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sh h3{font-size:19px;font-weight:800}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;border:1px dashed var(--line);border-radius:8px;background:var(--surface)}
+.empty p{margin:0;color:var(--muted);max-width:68ch}
+.decide{background:var(--warn-bg);color:var(--warn-ink);border-radius:6px;padding:8px 12px;font-size:13.5px}
+.decide b{display:block;margin-bottom:2px}
+.okbox{background:var(--jade-soft);color:var(--jade);border-radius:6px;padding:8px 12px;font-size:13.5px}
+.next{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.next .t{font-size:14px;min-width:0;flex:1 1 300px}
+.next .t small{display:block;color:var(--muted);font-size:12.5px}
+
+/* 核心候选 */
+.cands{display:flex;flex-direction:column;gap:10px}
+.cand{display:grid;grid-template-columns:2.1em minmax(0,1fr);gap:2px 12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.cand.chosen{background:var(--jade-soft);border-color:var(--jade)}
+.letter{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;color:var(--ink)}
+.cand .letter{color:var(--muted);font-size:22px}
+.cand.chosen .letter{color:var(--jade)}
+.cbody{display:flex;flex-direction:column;gap:7px;min-width:0}
+.cmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--muted)}
+.ctext{margin:0;font-family:var(--f-display);font-weight:600;font-size:17.5px;line-height:1.75;color:var(--ink)}
+.ctext.big{font-size:19px}
+.ctext mark{background:var(--gold-soft);color:inherit;border-bottom:2px solid var(--gold);padding:0 1px}
+.tests{display:flex;flex-wrap:wrap;gap:6px}
+.step,.effect{margin:0;font-size:13px;color:var(--muted)}
+.step b{color:var(--ink);font-weight:500}
+.cact{display:flex;flex-wrap:wrap;gap:8px}
+.anno{display:flex;align-items:flex-start;gap:8px;background:var(--gold-soft);border-radius:6px;padding:7px 10px;font-size:13px}
+.anno .q{color:var(--gold);font-weight:700}
+.anno .x{margin-left:auto;flex:none;width:28px;height:28px;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:16px}
+.anno .x:hover{color:var(--warn-ink)}
+.form{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.form label,.composer label{font-size:12.5px;color:var(--muted)}
+input.f,textarea.f{width:100%;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);line-height:1.6}
+textarea.f{resize:vertical}
+.composer{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px dashed var(--line);border-radius:8px;background:var(--surface)}
+.composer .crow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* 段卡片（同导演界面的分段卡片） */
+.seg{display:flex;flex-direction:column;scroll-margin-top:calc(var(--barh,96px) + 8px)}
+.shead{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--barh,96px));z-index:4;background:var(--surface);border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;padding:10px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 8px 12px -12px var(--shadow)}
+@media (max-width:720px){.shead{position:static}}
+.srow1{display:flex;align-items:center;gap:6px 10px;min-width:0;flex-wrap:wrap}
+.stitle{flex:1 1 auto;min-width:0;font-size:16px;font-weight:600}
+.srow1 .t{flex:none;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.srow2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:0 0 10px 10px;display:flex;flex-direction:column;min-width:0}
+.band{background:var(--gold-soft);padding:9px 14px;font-size:13.5px;display:flex;gap:10px;align-items:baseline}
+.band .k{flex:none;font-weight:700;color:var(--gold);letter-spacing:.06em}
+.cardb{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.picked{display:flex;flex-direction:column;gap:6px}
+.picked .lab{font-size:12.5px;font-weight:700;color:var(--jade);letter-spacing:.06em}
+
+/* 时间线和曲线 */
+.tl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 14px 10px}
+.curve{position:relative;height:104px;margin-top:20px}
+.curve svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pk{position:absolute;transform:translate(-50%,-100%);font-family:var(--f-mono);font-size:11.5px;color:var(--gold);white-space:nowrap;padding-bottom:2px}
+.sbar{display:flex;gap:3px;margin-top:8px}
+.sbar button{min-width:0;text-align:left;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);display:flex;flex-direction:column;cursor:pointer;overflow:hidden}
+.sbar button:hover{border-color:var(--gold)}
+.sbar .c{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.sbar .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbar .st{font-size:11.5px;white-space:nowrap;color:var(--muted)}
+.sbar .ok .st{color:var(--jade)} .sbar .wait .st{color:var(--gold)} .sbar .stale .st{color:var(--warn-ink)}
+.sbar button.wait{border-color:var(--gold)}
+.axis{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:4px}
+@media (max-width:720px){.sbar{flex-wrap:wrap}.sbar button{flex:1 1 30%!important}}
+
+/* 表 */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-weight:500;color:var(--muted);white-space:nowrap;font-size:12.5px}
+td.tm{font-family:var(--f-mono);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+td.cc{font-weight:500}
+.wide table{min-width:760px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.two{grid-template-columns:1fr}}
+.two h4{font-size:15px;margin-bottom:6px}
+.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.plain li{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+ol.read{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+ol.read li{display:grid;grid-template-columns:4.2em minmax(0,1fr);gap:4px 12px;padding:9px 14px;border-top:1px solid var(--line)}
+ol.read li:first-child{border-top:0}
+ol.read .c{font-family:var(--f-mono);font-size:12.5px;color:var(--gold);padding-top:3px}
+ol.read .s{font-family:var(--f-display);font-weight:600;font-size:15.5px;line-height:1.7}
+ol.read .s.none{font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:13.5px}
+ol.rules{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:4px;max-width:76ch}
+.lanes{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px 14px}
+.lane{display:grid;grid-template-columns:9em minmax(0,1fr);gap:6px 14px;padding:10px 0;border-top:1px solid var(--line)}
+.lane:first-child{border-top:0}
+.lane .ln b{display:block;font-family:var(--f-display);font-weight:800;font-size:15.5px}
+.lane .ln span{font-size:12.5px;color:var(--muted)}
+.track{position:relative;height:18px;border-bottom:2px solid var(--sunk);margin-top:6px}
+.track i{position:absolute;bottom:-6px;width:10px;height:10px;border-radius:50%;background:var(--jade);transform:translateX(-50%);border:2px solid var(--surface)}
+.lane .ev{grid-column:2;font-size:13px;color:var(--muted)}
+.lane .ev .tm{font-family:var(--f-mono);font-size:12px;color:var(--ink)}
+.lane .ev .end{color:var(--ink)}
+.lane .axis{grid-column:2;margin-top:0}
+@media (max-width:560px){.lane{grid-template-columns:1fr}.lane .ev,.lane .axis{grid-column:1}}
+.prop{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 14px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.prop .txt{flex:1 1 320px;min-width:0;font-size:14px}
+.prop .why{display:block;font-size:12.5px;color:var(--muted)}
+.prop.drop .txt .w{text-decoration:line-through;color:var(--muted)}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:none}
+.seg2 button{font-size:13px;padding:4px 14px;border:0;background:var(--surface);color:var(--muted);cursor:pointer}
+.seg2 button+button{border-left:1px solid var(--line)}
+.seg2 button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.prompt{margin:0;padding:14px 16px;background:var(--sunk);border-radius:6px;font-family:var(--f-body);font-size:14.5px;line-height:1.85;color:var(--ink);white-space:pre-wrap;word-break:break-word;max-height:70vh;overflow:auto}
+details.chg{border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+details.chg summary{cursor:pointer;padding:7px 12px;font-size:13px;color:var(--muted)}
+details.chg .body{padding:0 12px 10px}
+pre.raw{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--f-body);font-size:13.5px;line-height:1.8;max-height:420px;overflow:auto}
+.npf{display:flex;flex-direction:column;gap:8px;max-width:720px}
+.npf .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* 页底 */
+.foot{border-top:2px solid var(--ink);padding-top:14px}
+.status{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding:10px 12px;border:1px dashed var(--line);border-radius:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="mast" id="mast"></header>
+  <div class="bar" id="bar"></div>
+  <main class="view" id="view"></main>
+  <footer class="foot" id="foot"></footer>
+</div>
+<nav class="rail" id="rail" aria-label="本页目录"></nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+// 用户要浅色：默认锁浅色（系统是深色也不翻过去）
+try{document.documentElement.setAttribute("data-theme","light")}catch(e){}
+
+// ---------- 方法论（每次调用 Claude 都带上） ----------
+var METHOD = [
+"你是“剧情核心”调度助手，帮导演在剧本和分镜之间先定下“核心”。规则：",
+"1. 剧本里已经写定的事件、台词、字幕、时长不能改；你额外加的东西都要能删。",
+"2. 核心句必须能拍：写出一个人、一件看得见的东西、一个反复做的动作、最后的变化；不许用“爱、坚守、思念、家国、情怀、命运、灵魂”这类拍不出来的词。",
+"3. 段核心必须是集核心里的一步；各段按顺序连读，应当正好是集核心一步步往前走。",
+"4. 情绪不写形容词，写手上在做的事和画面里看得见的结果。",
+"5. 用户的标注和要求是硬条件，必须照做，意思不能丢。",
+"6. 剧本里引用歌词的字幕只写“（剧本字幕）”，不要复述歌词原文。",
+"7. 只输出要求的 JSON，用简体中文。"
+].join("\n");
+var BANNED = /(爱情|坚守|思念|家国|情怀|命运|灵魂|深情|感动)/;
+
+// 流程（LangGraph 思路）：12 个节点，状态在节点间传递；人工节点停下来等人
+var NODES = [
+ {id:"n01",label:"读剧本",kind:"ai"},
+ {id:"n02",label:"划分已定和空着",kind:"ai"},
+ {id:"n03",label:"集核心候选",kind:"ai"},
+ {id:"n04",label:"你选集核心",kind:"human"},
+ {id:"n05",label:"段核心候选",kind:"ai"},
+ {id:"n06",label:"你选段核心",kind:"human"},
+ {id:"n07",label:"能拍测试",kind:"ai"},
+ {id:"n08",label:"四张表",kind:"ai"},
+ {id:"n09",label:"自动检查",kind:"local"},
+ {id:"n10",label:"你取舍提案",kind:"human"},
+ {id:"n11",label:"剧情核心提示词",kind:"local"},
+ {id:"n12",label:"交给导演 skill",kind:"human"}
+];
+var STAGES = [
+ {key:"ep",name:"集核心",nodes:["n01","n02","n03","n04"],note:"剧本写定的不改，空着的才要设计"},
+ {key:"seg",name:"段核心",nodes:["n05","n06"],note:"集核心一改，各段标“待重算”"},
+ {key:"tables",name:"四张表",nodes:["n07","n08","n09","n10"],note:"检查出漏洞，就带着漏洞退回去重写"},
+ {key:"prompt",name:"剧情核心提示词",nodes:["n11","n12"],note:"合成一份，交给导演 skill"}
+];
+var VIEWS = [["ep","集核心"],["seg","段核心"],["tables","四张表"],["prompt","剧情核心提示词"]];
+var NODE_GO = {n01:["ep","sec-script"],n02:["ep","sec-split"],n03:["ep","sec-ep"],n04:["ep","sec-ep"],n05:["seg",null],n06:["seg",null],n07:["tables","sec-test"],n08:["tables","sec-props"],n09:["tables","sec-check"],n10:["tables","sec-prop"],n11:["prompt","sec-prompt"],n12:["prompt","sec-hand"]};
+var BTN = {n01:"让 Claude 读剧本",n02:"让 Claude 划分已定和空着",n03:"让 Claude 写集核心候选",n04:"去选集核心",n05:"让 Claude 写段核心候选",n06:"去选段核心",n07:"让 Claude 做能拍测试",n08:"让 Claude 写四张表",n09:"运行自动检查",n10:"去取舍提案",n11:"去看剧情核心提示词",n12:"去交给导演 skill"};
+
+// ---------- 状态 ----------
+var db=null, sample=null, downloads=null;
+var projects=[], pid=null, S=null, checkpoints=[];
+var ui={view:null, open:{}, anno:null, lastSel:null, drafts:{}, newProj:false, connecting:true, scrollTo:null, vlogOpen:false};
+var running=null, liveText="";
+var unsubProject=null, unsubChecks=null, writing=Promise.resolve();
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
+function toast(msg){var t=$("toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove("on")},3400)}
+function dis(){return running?" disabled":""}
+function segs(){return (S&&S.script&&S.script.segments)||[]}
+function segBy(code){return segs().filter(function(s){return s.code===code})[0]}
+function dur(s){return (s.b-s.a)}
+function timeStr(s){return "（"+s.a+"–"+s.b+"）"+dur(s)+" 秒"}
+function totalDur(){var sg=segs();return S.duration||(sg.length?sg[sg.length-1].b:0)||0}
+function nodeLabel(id){return (NODES.filter(function(n){return n.id===id})[0]||{}).label||""}
+function epChosen(){var e=S&&S.ep;if(!e||!e.chosen)return null;return (e.candidates||[]).filter(function(c){return c.id===e.chosen})[0]||null}
+function segState(code){S.seg=S.seg||{};S.seg[code]=S.seg[code]||{candidates:[],chosen:null,annotations:[]};return S.seg[code]}
+function segChosen(code){var g=S.seg&&S.seg[code];if(!g||!g.chosen)return null;return (g.candidates||[]).filter(function(c){return c.id===g.chosen})[0]||null}
+function epText(){var c=epChosen();return c?c.text:""}
+function segsHash(){return segs().map(function(s){var c=segChosen(s.code);return s.code+":"+(c?c.text:"")}).join("|")}
+function segStale(code){var g=S.seg&&S.seg[code];return !!(g&&g.candidates&&g.candidates.length&&g.basedOn&&g.basedOn!==epText())}
+function chosenCount(){return segs().filter(function(s){return segChosen(s.code)&&!segStale(s.code)}).length}
+function firstPendingSeg(){return segs().filter(function(s){return segStale(s.code)||!segChosen(s.code)})[0]||null}
+function testOf(c){
+  var hasP=!!(c.person&&c.person.trim()), hasO=!!(c.object&&c.object.trim()), hasA=!!(c.action&&c.action.trim()), hasC=!!(c.change&&c.change.trim());
+  return {items:[["人",hasP,c.person],["东西",hasO,c.object],["动作",hasA,c.action],["变化",hasC,c.change]],pass:[hasP,hasO,hasA,hasC].filter(Boolean).length,banned:BANNED.test(c.text||"")};
+}
+function fmtTime(t){var d=new Date(t);function p(n){return (n<10?"0":"")+n}return p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())}
+function arr(x){return Array.isArray(x)?x:[]}
+
+// ---------- 节点状态（每次从档案算出来，不另存） ----------
+function nodeStatus(id){
+  if(!S) return {k:"todo",sub:"未开始"};
+  if(running&&running.node===id) return {k:"run",sub:"运行中"};
+  var sg=segs(), n=sg.length;
+  switch(id){
+    case "n01": return n?{k:"done",sub:"已分 "+n+" 段"}:(S.script&&S.script.raw?{k:"todo",sub:"待运行"}:{k:"wait",sub:"等你粘贴剧本"});
+    case "n02": return S.split?{k:"done",sub:"已分开"}:{k:"todo",sub:n?"待运行":"未开始"};
+    case "n03": return (S.ep&&S.ep.candidates&&S.ep.candidates.length)?{k:"done",sub:S.ep.candidates.length+" 个候选"}:{k:"todo",sub:"未开始"};
+    case "n04": if(epChosen()) return {k:"done",sub:"已选 "+(epChosen().own?"你写的":S.ep.chosen)};
+      return (S.ep&&S.ep.candidates&&S.ep.candidates.length)?{k:"wait",sub:"等你选"}:{k:"todo",sub:"未开始"};
+    case "n05":
+      if(!epChosen()) return {k:"todo",sub:"未开始"};
+      var gen=sg.filter(function(s){var g=S.seg&&S.seg[s.code];return g&&g.candidates&&g.candidates.length}).length;
+      var stale=sg.filter(function(s){return segStale(s.code)}).length;
+      if(stale) return {k:"stale",sub:"待重算 "+stale+" 段"};
+      if(gen===n&&n) return {k:"done",sub:n+" 段都有候选"};
+      return gen?{k:"todo",sub:"已出 "+gen+"/"+n+" 段"}:{k:"todo",sub:"待运行"};
+    case "n06":
+      if(!epChosen()) return {k:"todo",sub:"未开始"};
+      var ch=chosenCount();
+      if(ch===n&&n) return {k:"done",sub:"已选 "+n+"/"+n+" 段"};
+      var next=sg.filter(function(s){var g=S.seg&&S.seg[s.code];return g&&g.candidates&&g.candidates.length&&!segChosen(s.code)&&!segStale(s.code)})[0];
+      return next?{k:"wait",sub:"已选 "+ch+"/"+n+"，等你选 "+next.code}:{k:"todo",sub:"已选 "+ch+"/"+n+" 段"};
+    case "n07":
+      if(!allSegChosen()) return {k:"todo",sub:"未开始"};
+      if(S.test&&S.test.basedOn===segsHash()) return {k:"done",sub:S.test.ok?"连读通过":"有 "+(S.test.issues||[]).length+" 处可改"};
+      return S.test?{k:"stale",sub:"待重测"}:{k:"todo",sub:"待运行"};
+    case "n08":
+      if(!allSegChosen()) return {k:"todo",sub:"物、人、景、秒"};
+      if(S.tables&&S.tables.basedOn===segsHash()) return {k:"done",sub:(S.tables.beats||[]).length+" 拍"};
+      return S.tables?{k:"stale",sub:"待重写"}:{k:"todo",sub:"待运行"};
+    case "n09":
+      if(!tablesFresh()) return {k:"todo",sub:"未开始"};
+      if(S.checks&&S.checks.basedOn===S.tables.at) return {k:"done",sub:S.checks.issues.length?S.checks.issues.length+" 处漏洞":"没有漏洞"};
+      return {k:"todo",sub:"待运行"};
+    case "n10":
+      if(!tablesFresh()) return {k:"todo",sub:"未开始"};
+      var ps=S.tables.proposals||[], dec=S.decisions||{};
+      var left=ps.filter(function(p){return !dec[p.id]}).length;
+      return left?{k:"wait",sub:"还有 "+left+" 条等你"}:{k:"done",sub:"已取舍 "+ps.length+" 条"};
+    case "n11": return (tablesFresh()&&nodeStatus("n10").k==="done")?{k:"done",sub:"可复制、可下载"}:{k:"todo",sub:"未开始"};
+    case "n12": if(nodeStatus("n11").k!=="done") return {k:"todo",sub:"未开始"};
+      return S.handedOff?{k:"done",sub:"已交接"}:{k:"wait",sub:"等你复制"};
+  }
+  return {k:"todo",sub:""};
+}
+function allSegChosen(){var sg=segs();return sg.length>0&&sg.every(function(s){return segChosen(s.code)&&!segStale(s.code)})}
+function tablesFresh(){return !!(S&&S.tables&&S.tables.basedOn===segsHash())}
+function nextNode(){for(var i=0;i<NODES.length;i++){var s=nodeStatus(NODES[i].id);if(s.k!=="done")return {n:NODES[i],s:s}}return null}
+function defaultView(){var x=nextNode();return x?NODE_GO[x.n.id][0]:"prompt"}
+function nextText(x){
+  if(!x) return "全部走完了，剧情核心提示词已经交给导演 skill。";
+  var n=segs().length;
+  switch(x.n.id){
+    case "n01": return "先让 Claude 读剧本、分段。";
+    case "n02": return "下一步：把剧本里写定的和空着的分开。";
+    case "n03": return "下一步：让 Claude 写 3 个集核心候选。";
+    case "n04": return "现在等你选这一集的核心。";
+    case "n05": return x.s.k==="stale"?"集核心改过了，有段落的候选要按新的集核心重算。":"下一步：让 Claude 给每一段写段核心候选。";
+    case "n06": var p=firstPendingSeg(); return p?("现在等你选 "+p.code+" "+p.name+" 的段核心（已选 "+chosenCount()+"/"+n+"）。"):"现在等你选段核心。";
+    case "n07": return x.s.k==="stale"?"段核心改过了，要重新连读测试。":"下一步：把 "+n+" 段的段核心连起来读，做能拍测试。";
+    case "n08": return x.s.k==="stale"?"段核心改过了，四张表要重写。":"下一步：写四张表——物件、人物、场景、按秒节拍。";
+    case "n09": return "下一步：自动检查秒数、物件去向和每一拍的核心。";
+    case "n10": return "现在等你取舍 Claude 加的提案（"+x.s.sub+"）。";
+    case "n11": return "剧情核心提示词可以合成了。";
+    case "n12": return "剧情核心提示词合好了，复制给导演 skill 就行。";
+  }
+  return "";
+}
+function doneText(){
+  if(!S) return "";
+  var bits=[], ec=epChosen(), n=segs().length, c=chosenCount();
+  if(ec) bits.push("集核心 "+(ec.own?"（你写的）":ec.id));
+  if(c) bits.push(c===n?"全部 "+n+" 段段核心":c+" 段段核心");
+  if(tablesFresh()) bits.push("四张表");
+  return bits.length?(" 已经定了："+bits.join("、")+"。"):"";
+}
+function segTag(code){
+  var g=S.seg&&S.seg[code], ch=segChosen(code);
+  if(segStale(code)) return {cls:"stale",text:"待重算",tag:'<span class="tag warn">待重算</span>',mk:"↻"};
+  if(ch) return {cls:"ok",text:"已选 "+(ch.own?"你写的":ch.id),tag:'<span class="tag ok">已选 '+esc(ch.own?"你写的":ch.id)+'</span>',mk:"✓"};
+  if(g&&g.candidates&&g.candidates.length) return {cls:"wait",text:"等你选",tag:'<span class="tag wait">等你选</span>',mk:"●"};
+  return {cls:"todo",text:"未生成",tag:'<span class="tag dash">未生成</span>',mk:""};
+}
+
+// ---------- 渲染 ----------
+function render(){
+  renderMast(); renderView(); renderBar(); renderRail(); renderFoot(); afterRender();
+}
+function afterRender(){
+  var bar=$("bar"); if(bar) document.documentElement.style.setProperty("--barh",bar.offsetHeight+"px");
+  if(ui.scrollTo){
+    var id=ui.scrollTo; ui.scrollTo=null;
+    requestAnimationFrame(function(){
+      if(id==="view-top"){var top=$("view").getBoundingClientRect().top+window.scrollY-(bar?bar.offsetHeight:0)-10; if(window.scrollY>top) window.scrollTo(0,top); return}
+      var el=$(id); if(el) el.scrollIntoView({block:"start"});
+    });
+  }
+  spy();
+}
+function testsHTML(c){
+  var t=testOf(c);
+  return '<div class="tests" aria-label="能拍测试">'+t.items.map(function(x){return x[1]?'<span class="tag ok"><b>'+x[0]+'</b>'+esc(x[2])+'</span>':'<span class="tag warn dash"><b>'+x[0]+'</b>没写出来</span>'}).join("")+(t.banned?'<span class="tag warn">有拍不出来的词</span>':'')+'</div>';
+}
+function quickHTML(){
+  return '<div class="quick">'+(projects.length?'<label class="sr" for="projSel">选择项目</label><select id="projSel" class="proj">'+projects.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===pid?" selected":"")+'>'+esc(p.title||p.id)+'</option>'}).join("")+'</select>':'')+(db&&S&&!ui.newProj?'<button type="button" class="btn sm" data-action="new-project">新建项目</button>':'')+'</div>';
+}
+function renderMast(){
+  var m=$("mast"), eb='<div class="mtop"><div class="eyebrow">剧情核心 · 剧本和导演 skill 之间</div>'+(ui.connecting?'':quickHTML())+'</div>';
+  if(ui.connecting){m.innerHTML=eb+'<h1>剧情核心工作台</h1><p class="lede"><span class="spin"></span> 正在读取项目…</p>';return}
+  if(!db){m.innerHTML=eb+'<h1>剧情核心工作台</h1><p class="lede"><b>这个页面要在 Claude 里打开。</b>项目、你的标注和每一版都存在 Claude 里；在这里看不到存储，所以没法保存。请在 Claude 应用或网页里打开。</p>';return}
+  if(!S||ui.newProj){m.innerHTML=eb+'<h1>剧情核心工作台</h1><p class="lede">把一集剧本粘进来。Claude 先读剧本、分段，再和你一起定这一集的核心和每一段的核心，写成按秒的四张表，最后合成一份剧情核心提示词，交给导演 skill。</p>';return}
+  var sg=segs(), D=totalDur();
+  var h='<div class="mtop"><div class="eyebrow">剧情核心 · 剧本和导演 skill 之间'+(D?' · '+D+' 秒':'')+(sg.length?' · '+sg.length+' 段':'')+'</div>'+quickHTML()+'</div><h1>'+esc(S.title||"未命名项目")+'</h1>';
+  var ec=epChosen();
+  h+='<section class="core" aria-label="这一集的核心">';
+  if(ec){
+    h+='<div class="lab"><span>这一集的核心</span><span class="tag ok">已选 '+esc(ec.own?"你写的":ec.id)+'</span>'+(ec.tilt?'<span class="tag">'+esc(ec.tilt)+'</span>':'')+'<span class="sp"></span><button type="button" class="lnk" data-action="view" data-view="ep" data-to="sec-ep">改集核心</button></div>';
+    h+='<p class="coretext">'+esc(ec.text)+'</p>'+(ec.own?'':testsHTML(ec));
+  } else {
+    h+='<div class="lab"><span>这一集的核心</span><span class="tag wait">还没定</span></div><p class="coretext empty">还没选。到“集核心”里从候选挑一句，或者自己写一句。</p>';
+  }
+  h+='</section>';
+  var x=nextNode();
+  h+='<p class="lede"><b>'+esc(nextText(x))+'</b>'+esc(doneText())+'</p>';
+  h+='<div class="arc" aria-label="四个阶段">'+STAGES.map(stageHTML).join("")+'</div>';
+  h+='<div class="mrow">'+(x?'<button type="button" class="btn pri" data-action="run-next"'+dis()+'>'+esc(BTN[x.n.id])+'</button>':'')+'<span class="note">按顺序走：Claude 的步骤点一下就跑，轮到你的步骤会停下来等你。</span></div>';
+  h+=vlogHTML();
+  m.innerHTML=h;
+}
+function stageHTML(st,i){
+  var ss=st.nodes.map(function(id){return nodeStatus(id)});
+  var cls=ss.some(function(s){return s.k==="run"})?"run":ss.some(function(s){return s.k==="wait"||s.k==="stale"})?"cur":ss.every(function(s){return s.k==="done"})?"done":"todo";
+  var d=ss[ss.length-1].sub; for(var j=0;j<ss.length;j++){ if(ss[j].k!=="done"){d=ss[j].sub;break} }
+  if(cls==="done") d="已完成 · "+ss[ss.length-1].sub;
+  // 棕色描边跟着“现在看的是哪一页”走；“等你 / 运行中”另用小标签标
+  var on=ui.view===st.key, flag=cls==="run"?'<span class="tag ok">运行中</span>':cls==="cur"?'<span class="tag wait">等你</span>':'';
+  return '<button type="button" class="stage '+cls+(on?' on':'')+'"'+(on?' aria-current="page"':'')+' data-action="view" data-view="'+st.key+'" data-to="view-top"><span class="n"><i>'+(i+1)+'</i>'+esc(st.name)+flag+'</span><span class="d">'+esc(d)+'</span><span class="nodes">'+
+    st.nodes.map(function(id,j){return '<span class="'+ss[j].k+'"><i class="dot '+ss[j].k+'"></i>'+esc(nodeLabel(id))+'</span>'}).join("")+'</span><span class="l">'+esc(st.note)+'</span></button>';
+}
+function vlogHTML(){
+  if(!checkpoints.length) return '';
+  return '<details class="vlog"'+(ui.vlogOpen?' open':'')+'><summary>版本记录（最近 '+checkpoints.length+' 版，最新在上；每一步跑完都会存一版）</summary><ul>'+checkpoints.map(function(c,i){
+    return '<li><b>v'+c.n+'</b><span class="lb">'+esc(c.label)+'</span><span class="tm">'+esc(fmtTime(c.at))+'</span>'+(i===0?'<span class="tag ok">当前</span>':'<button type="button" class="lnk" data-action="restore-cp" data-cp="'+esc(c.id)+'">回到这一版</button>')+'<button type="button" class="lnk" data-action="fork-cp" data-cp="'+esc(c.id)+'" title="从这一版复制出一个新项目，原来的不动">分叉</button></li>';
+  }).join("")+'</ul></details>';
+}
+function viewBadge(key){
+  var st=STAGES.filter(function(s){return s.key===key})[0]; if(!st||!S) return "";
+  return st.nodes.some(function(id){var k=nodeStatus(id).k;return k==="wait"||k==="stale"})?'<i class="bd" aria-label="有等你处理的"></i>':'';
+}
+function runText(){return "Claude 正在写："+nodeLabel(running.node==="seg1"?"n06":running.node)+(liveText?"，已 "+liveText.length+" 字":"（第一次会先问你是否允许）")}
+function renderBar(){
+  var b=$("bar");
+  if(ui.connecting||!db||!S||ui.newProj){b.innerHTML="";b.hidden=true;return}
+  b.hidden=false;
+  var tabs='<div class="views" role="tablist" aria-label="页面">'+VIEWS.map(function(v){return '<button type="button" role="tab" aria-selected="'+(ui.view===v[0])+'" data-action="view" data-view="'+v[0]+'" data-to="view-top">'+v[1]+viewBadge(v[0])+'</button>'}).join("")+'</div>';
+  var run=running?'<span class="runbar"><span class="spin"></span><span id="liveN">'+esc(runText())+'</span><button type="button" class="btn sm" data-action="stop">停止</button></span>':'';
+  var anchors=[].slice.call(document.querySelectorAll("#view [data-anchor]"));
+  var jump=anchors.length?'<nav class="jump" aria-label="跳到">'+anchors.map(function(a){var mk=a.getAttribute("data-mk");return '<a href="#'+a.id+'" data-action="jump" data-to="'+a.id+'" class="'+esc(a.getAttribute("data-cls")||"")+'" title="'+esc(a.getAttribute("data-title")||a.getAttribute("data-label"))+'">'+esc(a.getAttribute("data-label"))+(mk?'<span class="mk">'+esc(mk)+'</span>':'')+'</a>'}).join("")+'</nav>':'';
+  b.innerHTML=tabs+run+jump;
+}
+function renderRail(){
+  var anchors=[].slice.call(document.querySelectorAll("#view [data-anchor]"));
+  $("rail").innerHTML=anchors.map(function(a){return '<a href="#'+a.id+'" data-action="jump" data-to="'+a.id+'"><i></i><span>'+esc(a.getAttribute("data-title")||a.getAttribute("data-label"))+'</span></a>'}).join("");
+  $("rail").hidden=!anchors.length;
+}
+function renderFoot(){
+  $("foot").innerHTML='<div class="status">依据：剧情核心方法 v0.1｜界面：和导演界面 UI-7 同一套（director-video-prompt 0.9.6）｜项目、标注和每一版都存在这个页面里，Claude 能读到</div>';
+}
+function spy(){
+  var anchors=[].slice.call(document.querySelectorAll("#view [data-anchor]")); if(!anchors.length) return;
+  var lim=(($("bar")||{}).offsetHeight||90)+40, cur=null;
+  anchors.forEach(function(a){ if(a.getBoundingClientRect().top<=lim) cur=a.id; });
+  if(!cur&&window.scrollY>0) cur=null;
+  [].forEach.call(document.querySelectorAll(".jump a,.rail a"),function(l){ l.setAttribute("aria-current",String(l.getAttribute("data-to")===cur)); });
+}
+var spyT=0; window.addEventListener("scroll",function(){ if(spyT) return; spyT=requestAnimationFrame(function(){spyT=0;spy()}); },{passive:true});
+window.addEventListener("resize",function(){var bar=$("bar"); if(bar) document.documentElement.style.setProperty("--barh",bar.offsetHeight+"px")});
+
+function renderView(){
+  var v=$("view");
+  if(ui.connecting){v.innerHTML='';return}
+  if(!db){v.innerHTML='';return}
+  if(!S||ui.newProj){v.innerHTML=newProjectHTML();return}
+  if(!ui.view) ui.view=defaultView();
+  v.innerHTML=({ep:viewEp,seg:viewSeg,tables:viewTables,prompt:viewPrompt})[ui.view]()+nextBox();
+}
+function newProjectHTML(){
+  return '<section class="sec"><div class="ephead"><h2>新建一个剧情核心项目</h2><p>剧本整段粘进来就行，带时间段更好。建好以后 Claude 会先读剧本、分段。</p></div>'+
+  '<form class="npf" id="npForm"><label for="npTitle" class="muted">剧名和集数</label><input class="f" id="npTitle" placeholder="例如：《镇山河》第 01 集" required>'+
+  '<label for="npScript" class="muted">剧本原文</label><textarea class="f" id="npScript" rows="12" placeholder="把剧本整段粘进来" required></textarea>'+
+  '<div class="row">'+(S?'<button type="button" class="btn" data-action="cancel-new">取消</button>':'')+'<button type="submit" class="btn pri">建好，开始读剧本</button></div></form></section>';
+}
+function nextBox(){
+  var x=nextNode();
+  if(!x) return '<div class="next"><span class="t"><b>全部走完了。</b><small>要改哪一步，回到那一页改；后面受影响的步骤会自动标成“待重算”。</small></span></div>';
+  var here=NODE_GO[x.n.id][0]===ui.view;
+  return '<div class="next"><span class="t"><b>'+esc(nextText(x))+'</b><small>'+(x.n.kind==="human"?"这一步要你来定。":"这一步由 Claude 来做，做完会存一版。")+(here?"":"在“"+esc((VIEWS.filter(function(v){return v[0]===NODE_GO[x.n.id][0]})[0]||[])[1]||"")+"”页。")+'</small></span><button type="button" class="btn pri" data-action="run-next"'+dis()+'>'+esc(BTN[x.n.id])+'</button></div>';
+}
+function ephead(title, meta, p, extra){
+  return '<section class="ephead"><h2>'+esc(title)+'</h2>'+(meta?'<div class="meta">'+esc(meta)+'</div>':'')+(p?'<p>'+p+'</p>':'')+(extra||"")+'</section>';
+}
+
+// ---- 候选（集核心和段核心共用） ----
+function annosOf(scope){return scope==="ep"?((S.ep&&S.ep.annotations)||[]):(((S.seg&&S.seg[scope.slice(4)])||{}).annotations||[])}
+function candHTML(scope,c,chosenId,annos){
+  var t=testOf(c), chosen=c.id===chosenId, text=esc(c.text);
+  (annos||[]).filter(function(a){return a.cand===c.id&&a.quote}).forEach(function(a){var q=esc(a.quote); if(q&&text.indexOf(q)>=0) text=text.replace(q,'<mark>'+q+'</mark>')});
+  var h='<div class="cand'+(chosen?" chosen":"")+'"><span class="letter" aria-hidden="true">'+esc(c.own?"写":c.id)+'</span><div class="cbody">';
+  h+='<div class="cmeta">'+(chosen?'<span class="tag ok">已选</span>':'')+(c.own?'<span class="tag">你写的</span>':'<span>候选 '+esc(c.id)+'</span>')+(c.tilt?'<span>'+esc(c.tilt)+'</span>':'')+(c.own?'':'<span>能拍测试 '+t.pass+'/4'+(t.banned?'，有拍不出来的词':'')+'</span>')+'</div>';
+  h+='<p class="ctext" data-scope="'+esc(scope)+'" data-cand="'+esc(c.id)+'">'+text+'</p>';
+  if(!c.own) h+=testsHTML(c);
+  if(c.step) h+='<p class="step">是集核心里的哪一步：<b>'+esc(c.step)+'</b></p>';
+  if(c.effect) h+='<p class="effect">'+esc(c.effect)+'</p>';
+  (annos||[]).forEach(function(a,i){ if(a.cand===c.id) h+='<div class="anno"><span><span class="q">你的标注'+(a.quote?'：“'+esc(a.quote)+'”':'')+'</span> → '+esc(a.note)+'</span><button type="button" class="x" aria-label="删除这条标注" data-action="del-anno" data-scope="'+esc(scope)+'" data-i="'+i+'">×</button></div>'});
+  if(ui.anno&&ui.anno.scope===scope&&ui.anno.cand===c.id){
+    h+='<form class="form annoForm" data-scope="'+esc(scope)+'" data-cand="'+esc(c.id)+'"><label for="aq">要改的那几个字（可以先在上面的句子里选中）</label><input class="f" id="aq" name="quote" value="'+esc(ui.anno.quote||"")+'">'+
+      '<label for="an">你的意见</label><textarea class="f" id="an" name="note" rows="2" placeholder="例如：松开时手指还张着，像还想抓住" required></textarea>'+
+      '<div class="cact"><button type="submit" class="btn pri sm">保存标注</button><button type="button" class="btn sm" data-action="anno-cancel">取消</button></div></form>';
+  }
+  h+='<div class="cact">'+(chosen?'':'<button type="button" class="btn out sm" data-action="choose" data-scope="'+esc(scope)+'" data-cand="'+esc(c.id)+'">选这个</button>')+
+     '<button type="button" class="btn sm" data-action="anno" data-scope="'+esc(scope)+'" data-cand="'+esc(c.id)+'">标注</button>'+
+     (c.own?'<button type="button" class="btn sm" data-action="del-own" data-scope="'+esc(scope)+'" data-cand="'+esc(c.id)+'">删除</button>':'')+'</div>';
+  return h+'</div></div>';
+}
+function composerHTML(scope){
+  var annos=annosOf(scope), id="cmp-"+scope.replace(/[^\w]/g,"");
+  return '<form class="composer" data-scope="'+esc(scope)+'"><label for="'+id+'">都不满意？写你自己的核心，或者写给 Claude 的要求</label>'+
+   '<textarea class="f" id="'+id+'" rows="2" placeholder="比如：不要眼泪，换成手上的动作">'+esc(ui.drafts[scope]||"")+'</textarea>'+
+   '<div class="crow"><span class="count">'+(annos.length?'你的 '+annos.length+' 条标注会当作硬条件':'也可以先在句子里选中几个字，再点“标注”')+'</span><span class="sp"></span>'+
+   '<button type="button" class="btn sm" data-action="own" data-scope="'+esc(scope)+'">存为我写的核心</button><button type="submit" class="btn out sm"'+dis()+'>按要求重新生成</button></div></form>';
+}
+
+// ---- 页签一：集核心 ----
+function viewEp(){
+  var sg=segs();
+  var h=ephead("集核心",(S.title||"")+(totalDur()?" · "+totalDur()+" 秒":"")+(sg.length?" · "+sg.length+" 段":""),"先定整集的一句核心：一个人、一件看得见的东西、一个反复做的动作、最后的变化。后面每一段的核心，都是它里面的一步。");
+  return h+secEp()+secScript()+secSplit();
+}
+function secEp(){
+  var e=S.ep||{}, cands=e.candidates||[];
+  var h='<section class="sec" id="sec-ep" data-anchor data-label="集核心候选"><div class="sh"><h3>集核心候选</h3><span class="count">'+(cands.length?cands.length+" 个":"")+'</span><span class="sp"></span>'+(cands.length?'<button type="button" class="btn sm" data-action="regen" data-scope="ep"'+dis()+'>换一批</button>':'')+'</div>';
+  if(!segs().length) return h+'<div class="empty"><p>先读剧本、分段，才能写集核心。</p><button type="button" class="btn pri" data-action="run" data-node="n01"'+dis()+'>让 Claude 读剧本</button></div></section>';
+  if(!cands.length) return h+'<div class="empty"><p>Claude 会写 3 个方向拉得开的集核心：一个偏情感和物件，一个偏人物的日常习惯，一个偏主旨。</p><button type="button" class="btn pri" data-action="run" data-node="n03"'+dis()+'>让 Claude 写集核心候选</button></div></section>';
+  if(!e.chosen) h+='<div class="decide"><b>需要你决定</b>选一个集核心。都不满意，就在句子上选中几个字点“标注”，或者在下面自己写一句。</div>';
+  h+='<div class="cands">'+cands.map(function(c){return candHTML("ep",c,e.chosen,e.annotations)}).join("")+'</div>';
+  if(e.chosen) h+='<p class="note">改了集核心，后面各段的段核心会标成“待重算”。</p>';
+  return h+composerHTML("ep")+'</section>';
+}
+function curvePoints(){
+  if(tablesFresh()&&S.tables.beats&&S.tables.beats.length) return S.tables.beats.filter(function(b){return typeof b.tension==="number"&&!isNaN(b.tension)}).map(function(b){return [Math.round((b.a+b.b)/2),b.tension]});
+  return (S.curve||[]).slice();
+}
+function peakPoints(pts){
+  var sorted=pts.slice().sort(function(a,b){return b[1]-a[1]}), out=[];
+  for(var i=0;i<sorted.length&&out.length<2;i++){ if(out.every(function(o){return Math.abs(o[0]-sorted[i][0])>=10})) out.push(sorted[i]); }
+  return out.sort(function(a,b){return a[0]-b[0]});
+}
+function timelineHTML(){
+  var sg=segs(), D=totalDur()||120, pts=curvePoints(), W=1000, H=100;
+  function Y(t){return 92-Math.max(0,Math.min(10,t))*8.4}
+  var h='<div class="tl">';
+  if(pts.length){
+    var line=pts.map(function(p){return (p[0]/D*W).toFixed(1)+","+Y(p[1]).toFixed(1)}).join(" ");
+    var area=(pts[0][0]/D*W).toFixed(1)+","+H+" "+line+" "+(pts[pts.length-1][0]/D*W).toFixed(1)+","+H;
+    var peaks=peakPoints(pts);
+    h+='<div class="curve" role="img" aria-label="'+esc("张力曲线，最紧的地方在 "+peaks.map(function(p){return "第 "+p[0]+" 秒（张力 "+(Math.round(p[1]*10)/10)+"）"}).join("、"))+'"><svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">'+
+      sg.slice(1).map(function(s){var x=(s.a/D*W).toFixed(1);return '<line x1="'+x+'" y1="0" x2="'+x+'" y2="100" style="stroke:var(--line)" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>'}).join("")+
+      '<polygon points="'+area+'" style="fill:var(--jade-soft)"/><polyline points="'+line+'" fill="none" style="stroke:var(--jade)" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'+
+      peaks.map(function(p){return '<span class="pk" style="left:'+Math.max(6,Math.min(94,p[0]/D*100)).toFixed(2)+'%;top:'+Y(p[1]).toFixed(0)+'%">第 '+p[0]+' 秒 · 张力 '+(Math.round(p[1]*10)/10)+'</span>'}).join("")+'</div>';
+  } else h+='<p class="note">四张表写好以后，这里按节拍画出张力曲线。</p>';
+  h+='<div class="sbar">'+sg.map(function(s){var st=segTag(s.code);return '<button type="button" class="'+st.cls+'" style="flex:'+Math.max(1,dur(s))+' 1 0" data-action="view" data-view="seg" data-to="seg-'+esc(s.code)+'" title="'+esc(s.code+" "+s.name+" "+timeStr(s))+'"><span class="c">'+esc(s.code)+'</span><span class="nm">'+esc(s.name)+'</span><span class="st">'+esc(st.text)+'</span></button>'}).join("")+'</div>';
+  h+='<div class="axis"><span>0</span><span>'+Math.round(D/2)+' 秒</span><span>'+D+' 秒</span></div></div>';
+  return h;
+}
+function secScript(){
+  var sg=segs(), raw=(S.script&&S.script.raw)||"";
+  var h='<section class="sec" id="sec-script" data-anchor data-label="剧本分段与节奏"><div class="sh"><h3>剧本分段与节奏</h3><span class="count">'+(sg.length?sg.length+" 段 · "+totalDur()+" 秒":"还没分段")+'</span><span class="sp"></span>'+(sg.length?'<button type="button" class="btn sm" data-action="run" data-node="n01"'+dis()+'>重新读剧本</button>':'')+'</div>';
+  if(!sg.length) return h+'<div class="empty"><p>剧本已经存好，还没分段。</p><button type="button" class="btn pri" data-action="run" data-node="n01"'+dis()+'>让 Claude 读剧本、分段</button></div></section>';
+  h+=timelineHTML();
+  h+='<div class="tbl"><table><thead><tr><th>段</th><th>时间</th><th>名字</th><th>剧本写了什么</th></tr></thead><tbody>'+sg.map(function(s){return '<tr><td class="tm">'+esc(s.code)+'</td><td class="tm">'+esc(timeStr(s))+'</td><td style="white-space:nowrap">'+esc(s.name)+'</td><td>'+esc(s.text)+'</td></tr>'}).join("")+'</tbody></table></div>';
+  if(raw) h+='<details class="chg"><summary>剧本原文（'+raw.length+' 字）</summary><div class="body"><pre class="raw">'+esc(raw)+'</pre></div></details>';
+  return h+'<p class="note">重新读剧本会清掉后面所有结果；之前的每一版都还在版本记录里。</p></section>';
+}
+function secSplit(){
+  var sp=S.split;
+  var h='<section class="sec" id="sec-split" data-anchor data-label="已定和空着"><div class="sh"><h3>已定和空着</h3><span class="count">剧本写定的不改，空着的才要设计</span><span class="sp"></span>'+(sp?'<button type="button" class="btn sm" data-action="run" data-node="n02"'+dis()+'>重跑</button>':'')+'</div>';
+  if(!sp) return h+'<div class="empty"><p>把剧本里已经写死的（事件、台词、字幕、时长）和还空着、要导演设计的（谁先动、怎么演、东西在哪）分开。</p><button type="button" class="btn pri" data-action="run" data-node="n02"'+(running||!segs().length?" disabled":"")+'>让 Claude 划分</button></div></section>';
+  function list(xs){return '<ul class="plain">'+xs.map(function(x){return '<li>'+(x.seg?'<span class="code">'+esc(x.seg)+'</span>':'')+esc(x.text)+'</li>'}).join("")+'</ul>'}
+  return h+'<div class="two"><div><h4>剧本写定的，不改（'+sp.fixed.length+'）</h4>'+list(sp.fixed)+'</div><div><h4>空着、要设计的（'+sp.open.length+'）</h4>'+list(sp.open)+'</div></div></section>';
+}
+
+// ---- 页签二：段核心 ----
+function viewSeg(){
+  var sg=segs();
+  if(!sg.length) return ephead("段核心","","")+'<div class="empty"><p>先读剧本、分段。</p><button type="button" class="btn pri" data-action="view" data-view="ep" data-to="sec-script">去集核心页读剧本</button></div>';
+  if(!epChosen()) return ephead("段核心","","")+'<div class="empty"><p>先选集核心。段核心是集核心里的一步，集核心没定，段核心没法写。</p><button type="button" class="btn pri" data-action="view" data-view="ep" data-to="sec-ep">去选集核心</button></div>';
+  var missing=sg.filter(function(x){var g=S.seg&&S.seg[x.code];return !(g&&g.candidates&&g.candidates.length)||segStale(x.code)});
+  var extra=missing.length?'<div class="row"><button type="button" class="btn pri" data-action="run" data-node="n05"'+dis()+'>让 Claude 写 '+missing.length+' 段的候选</button></div>':'';
+  var h=ephead("段核心",sg.length+" 段 · 已选 "+chosenCount()+"/"+sg.length+" · "+totalDur()+" 秒","每一段的核心都是集核心里的一步。按顺序连读，应当正好把集核心走完。",extra);
+  return h+sg.map(segCard).join("");
+}
+function segCard(s){
+  var g=(S.seg&&S.seg[s.code])||{}, ch=segChosen(s.code), stale=segStale(s.code), cands=g.candidates||[], st=segTag(s.code);
+  var open=!ch||stale||!!ui.open[s.code], scope="seg:"+s.code, annos=g.annotations||[];
+  var h='<article class="seg" id="seg-'+esc(s.code)+'" data-anchor data-label="'+esc(s.code)+'" data-title="'+esc(s.code+" "+s.name+" · "+st.text)+'" data-cls="mono '+st.cls+'" data-mk="'+esc(st.mk)+'">';
+  h+='<div class="shead"><div class="srow1"><span class="letter">'+esc(s.code)+'</span><span class="stitle">'+esc(s.name)+'</span><span class="t">'+esc(timeStr(s))+'</span>'+st.tag+'</div>';
+  h+='<div class="srow2"><span class="count">候选 '+cands.filter(function(c){return !c.own}).length+(cands.some(function(c){return c.own})?' · 你写的 '+cands.filter(function(c){return c.own}).length:'')+' · 标注 '+annos.length+'</span><span class="sp"></span>';
+  if(ch&&!stale&&!ui.open[s.code]) h+='<button type="button" class="btn sm" data-action="copy-core" data-scope="'+esc(scope)+'">复制这一句</button><button type="button" class="btn sm" data-action="reopen" data-code="'+esc(s.code)+'">看候选、改选</button>';
+  else if(cands.length) h+=(ch&&!stale?'<button type="button" class="btn sm" data-action="collapse" data-code="'+esc(s.code)+'">收起</button>':'')+'<button type="button" class="btn sm" data-action="regen" data-scope="'+esc(scope)+'"'+dis()+'>换一批</button>';
+  h+='</div></div><div class="card"><div class="band"><span class="k">剧本</span><span>'+esc(s.text||"")+'</span></div><div class="cardb">';
+  if(stale) h+='<div class="decide"><b>集核心改过了</b>这一段的候选是按旧的集核心写的，建议重新生成。<div class="cact" style="margin-top:6px"><button type="button" class="btn sm" data-action="regen" data-scope="'+esc(scope)+'"'+dis()+'>按新的集核心重新生成这一段</button></div></div>';
+  if(!cands.length){
+    h+='<div class="empty"><p>这一段还没有候选。</p><button type="button" class="btn pri" data-action="run" data-node="n05"'+dis()+'>让 Claude 写还没有候选的段</button></div>';
+  } else if(!open){
+    h+='<div class="picked"><span class="lab">段核心'+(ch.own?"（你写的）":" · 候选 "+esc(ch.id))+'</span><p class="ctext big">'+esc(ch.text)+'</p>'+(ch.own?'':testsHTML(ch))+(ch.step?'<p class="step">是集核心里的哪一步：<b>'+esc(ch.step)+'</b></p>':'')+'</div>';
+    annos.forEach(function(a){ h+='<div class="anno"><span><span class="q">你的标注'+(a.quote?'：“'+esc(a.quote)+'”':'')+'</span> → '+esc(a.note)+'</span></div>'; });
+  } else {
+    if(!ch) h+='<div class="decide"><b>需要你决定</b>选一个段核心。都不满意，就在句子上选中几个字点“标注”，或者在下面自己写一句，再点“按要求重新生成”。</div>';
+    h+='<div class="cands">'+cands.map(function(c){return candHTML(scope,c,g.chosen,annos)}).join("")+'</div>'+composerHTML(scope);
+  }
+  return h+'</div></div></article>';
+}
+
+// ---- 页签三：四张表 ----
+function viewTables(){
+  var sg=segs();
+  var h=ephead("四张表",tablesFresh()?((S.tables.beats||[]).length+" 拍 · "+(S.tables.props||[]).length+" 样贯穿物 · "+totalDur()+" 秒"):"","先把各段核心连起来读，再具体到人、物、景，按秒排。写好以后自动检查漏洞，最后你来取舍 Claude 额外加的提案。");
+  if(!allSegChosen()){
+    var miss=sg.filter(function(s){return !segChosen(s.code)||segStale(s.code)});
+    return h+'<div class="empty"><p>还差 '+miss.length+' 段没定段核心（'+esc(miss.map(function(s){return s.code}).join("、"))+'）。全部选好以后才能连读测试、写四张表。</p><button type="button" class="btn pri" data-action="view" data-view="seg" data-to="'+(miss[0]?"seg-"+esc(miss[0].code):"view-top")+'">去选段核心</button></div>';
+  }
+  h+=secTest();
+  if(!tablesFresh()){
+    h+='<section class="sec" id="sec-props" data-anchor data-label="写四张表"><div class="sh"><h3>四张表</h3></div>'+(S.tables?'<div class="decide"><b>段核心改过了</b>四张表是按旧的段核心写的，要重写。</div>':'')+'<div class="empty"><p>物件（贯穿物和它最后去哪）、人物（每段想要什么、手上在做什么、不做什么）、场景（在核心里干什么、东西放哪）、节拍（按秒，首尾相接盖满 0 到 '+totalDur()+' 秒，每拍写“核心走到哪”）。另外写全片规矩和 Claude 额外加的提案。</p><button type="button" class="btn pri" data-action="run" data-node="n08"'+dis()+'>让 Claude 写四张表（要一两分钟）</button></div></section>';
+    return h;
+  }
+  var T=S.tables, D=totalDur()||120;
+  return h+secProps(T,D)+secPeople(T)+secScenes(T)+secBeats(T)+secRules(T)+secCheck(T)+secProposals(T);
+}
+function secTest(){
+  var t=S.test, fresh=t&&t.basedOn===segsHash();
+  var h='<section class="sec" id="sec-test" data-anchor data-label="能拍测试"><div class="sh"><h3>能拍测试 · 连起来读</h3><span class="sp"></span><button type="button" class="btn sm'+(fresh?'':' pri')+'" data-action="run" data-node="n07"'+dis()+'>'+(t?"重新测试":"让 Claude 测试")+'</button></div>';
+  h+='<p class="note">把各段核心按顺序读一遍：每段是不是集核心里的一步，连起来有没有跳步、重复、断掉，每句能不能拍。</p>';
+  h+='<ol class="read"><li><span class="c">集核心</span><span class="s">'+esc(epText())+'</span></li>'+segs().map(function(s){var c=segChosen(s.code);return '<li><span class="c">'+esc(s.code)+'</span><span class="s'+(c?'':' none')+'">'+esc(c?c.text:"（还没选）")+'</span></li>'}).join("")+'</ol>';
+  if(fresh){
+    h+=t.ok&&!(t.issues||[]).length?'<div class="okbox">'+esc(t.summary||"连读通过。")+'</div>':'<div class="decide"><b>'+esc(t.summary||"有几处可以改")+'</b>改不改由你：要改，就回到那一段换候选或标注后重新生成。</div>';
+    if((t.issues||[]).length) h+='<div class="tbl"><table><thead><tr><th>段</th><th>问题</th><th>建议</th><th></th></tr></thead><tbody>'+t.issues.map(function(x){return '<tr><td class="tm">'+esc(x.code||"")+'</td><td>'+esc(x.problem)+'</td><td>'+esc(x.fix||"")+'</td><td>'+(segBy(x.code)?'<button type="button" class="lnk" data-action="goseg" data-code="'+esc(x.code)+'">去这一段</button>':'')+'</td></tr>'}).join("")+'</tbody></table></div>';
+  } else if(t) h+='<div class="decide"><b>段核心改过了</b>上一次的测试结果作废，重新测一下。</div>';
+  return h+'</section>';
+}
+function secProps(T,D){
+  var h='<section class="sec" id="sec-props" data-anchor data-label="物件"><div class="sh"><h3>贯穿物去向</h3><span class="count">'+(T.props||[]).length+' 样 · 按秒</span></div><div class="lanes">';
+  h+=(T.props||[]).map(function(p){
+    var ev=arr(p.events), miss=!p.end||/[？?]|未|不明/.test(p.end);
+    return '<div class="lane"><div class="ln"><b>'+esc(p.name)+'</b><span>'+esc(p.meaning||"")+'</span></div><div><div class="track" aria-hidden="true">'+ev.map(function(e){var x=Math.max(0,Math.min(100,(+e.t||0)/D*100));return '<i style="left:'+x.toFixed(2)+'%" title="'+esc(e.t+" 秒 "+e.what)+'"></i>'}).join("")+'</div><div class="axis"><span>0</span><span>'+D+' 秒</span></div></div>'+
+      '<div class="ev">'+ev.map(function(e){return '<span class="tm">'+esc(e.t)+' 秒</span> '+esc(e.what)}).join(" → ")+'<br>'+(miss?'<span class="tag warn">最后去哪没交代</span>':'<b class="end">最后：</b><span class="end">'+esc(p.end)+'</span>')+'</div></div>';
+  }).join("");
+  return h+'</div></section>';
+}
+function table(head,rows,cls){
+  cls=cls||{};
+  return '<div class="tbl'+(cls.wide?' wide':'')+'"><table><thead><tr>'+head.map(function(x){return '<th>'+esc(x)+'</th>'}).join("")+'</tr></thead><tbody>'+rows.map(function(r){return '<tr>'+r.map(function(x,i){var c=(cls.cols||{})[i]||"";if(c==="cc"&&!(x&&String(x).trim()))return '<td class="cc"><span class="tag warn">空着</span></td>';return '<td'+(c?' class="'+c+'"':'')+'>'+esc(x)+'</td>'}).join("")+'</tr>'}).join("")+'</tbody></table></div>';
+}
+function secPeople(T){return '<section class="sec" id="sec-people" data-anchor data-label="人物"><div class="sh"><h3>人物</h3><span class="count">每段一行</span></div>'+table(["段","几岁","想要","手上做的事","不做的","他怎么在场"],(T.people||[]).map(function(r){return [r.seg,r.age,r.want,r.doing,r.notDoing,r.him]}),{wide:true,cols:{0:"tm"}})+'</section>'}
+function secScenes(T){return '<section class="sec" id="sec-scenes" data-anchor data-label="场景"><div class="sh"><h3>场景</h3></div>'+table(["场景","在核心里干什么","出现在","放什么、东西在哪"],(T.scenes||[]).map(function(r){return [r.name,r.role,r.segs,r.contents]}),{wide:true})+'</section>'}
+function secBeats(T){
+  var bs=(T.beats||[]).slice().sort(function(a,b){return a.a-b.a});
+  return '<section class="sec" id="sec-beats" data-anchor data-label="节拍"><div class="sh"><h3>节拍 · 按秒</h3><span class="count">'+bs.length+' 拍 · 最后一列是这一拍把核心推到哪</span></div>'+table(["时间","场景","人","物","怎么演","核心走到哪","张力"],bs.map(function(b){return ["（"+b.a+"–"+b.b+"）"+(b.b-b.a)+" 秒",b.scene,b.people,b.objects,b.acting,b.core,isNaN(b.tension)?"":Math.round(b.tension*10)/10]}),{wide:true,cols:{0:"tm",5:"cc",6:"tm"}})+'</section>';
+}
+function secRules(T){return '<section class="sec" id="sec-rules" data-anchor data-label="规矩"><div class="sh"><h3>全片规矩</h3></div><ol class="rules">'+(T.rules||[]).map(function(r){return '<li>'+esc(r)+'</li>'}).join("")+'</ol></section>'}
+function secCheck(T){
+  var c=S.checks, fresh=c&&c.basedOn===T.at;
+  var h='<section class="sec" id="sec-check" data-anchor data-label="检查"><div class="sh"><h3>自动检查</h3><span class="count">不用 Claude，马上出结果</span><span class="sp"></span><button type="button" class="btn sm'+(fresh?'':' pri')+'" data-action="run" data-node="n09">'+(c?"重新检查":"运行检查")+'</button></div>';
+  if(!fresh) return h+'<p class="note">检查秒数接不接得上、每件东西有没有交代最后去哪、每一拍有没有推进核心、“怎么演”里有没有拍不出来的词。</p></section>';
+  if(!c.issues.length) return h+'<div class="okbox">没有查出漏洞：秒数首尾相接，每一拍都推进了核心，每件东西都有去向。</div></section>';
+  h+=c.issues.map(function(x){return '<div class="decide"><b>'+esc(x.where)+'：'+esc(x.text)+'</b>怎么补：'+esc(x.fix)+'</div>'}).join("");
+  return h+'<div class="cact"><button type="button" class="btn out" data-action="run" data-node="n08" data-fix="1"'+dis()+'>带着这 '+c.issues.length+' 处漏洞让 Claude 重写四张表</button></div></section>';
+}
+function secProposals(T){
+  var ps=T.proposals||[], dec=S.decisions||{};
+  var h='<section class="sec" id="sec-prop" data-anchor data-label="提案"><div class="sh"><h3>你取舍提案</h3><span class="count">Claude 在剧本上额外加的设计，每条都能删</span><span class="sp"></span>'+(ps.length?'<button type="button" class="btn sm" data-action="decide-all" data-v="keep">剩下的都留</button>':'')+'</div>';
+  if(!ps.length) return h+'<div class="okbox">这一版没有额外的提案。</div></section>';
+  return h+ps.map(function(p){var d=dec[p.id];return '<div class="prop'+(d==="drop"?" drop":"")+'"><div class="txt">'+(p.where?'<span class="code">'+esc(p.where)+'</span>':'')+'<span class="w">'+esc(p.text)+'</span><span class="why">'+esc(p.why||"")+'</span></div><div class="seg2" role="group" aria-label="留还是删"><button type="button" aria-pressed="'+(d==="keep")+'" data-action="decide" data-id="'+esc(p.id)+'" data-v="keep">留</button><button type="button" aria-pressed="'+(d==="drop")+'" data-action="decide" data-id="'+esc(p.id)+'" data-v="drop">删</button></div></div>'}).join("")+'</section>';
+}
+
+// ---- 页签四：剧情核心提示词 ----
+function composePrompt(){
+  var L=[], T=S.tables||{}, dec=S.decisions||{};
+  L.push("【剧情核心提示词】"+(S.title||""));
+  L.push("集核心："+epText());
+  L.push("");
+  L.push("段核心：");
+  segs().forEach(function(s){var c=segChosen(s.code);L.push("- "+s.code+" "+s.name+timeStr(s)+"："+(c?c.text:"（未选）"))});
+  if((T.rules||[]).length){L.push("");L.push("全片规矩：");T.rules.forEach(function(r,i){L.push((i+1)+". "+r)})}
+  if((T.props||[]).length){L.push("");L.push("贯穿物去向：");T.props.forEach(function(p){L.push("- "+p.name+"（"+(p.meaning||"")+"）："+(p.events||[]).map(function(e){return "第 "+e.t+" 秒 "+e.what}).join(" → ")+"；最后："+(p.end||""))})}
+  if((T.people||[]).length){L.push("");L.push("人物：");T.people.forEach(function(r){L.push("- "+r.seg+" · "+r.age+"：想要"+r.want+"；手上做的事："+r.doing+"；不做："+r.notDoing+"；他："+r.him)})}
+  if((T.scenes||[]).length){L.push("");L.push("场景：");T.scenes.forEach(function(r){L.push("- "+r.name+"（"+r.segs+"）："+r.role+"。"+r.contents)})}
+  if((T.beats||[]).length){L.push("");L.push("节拍（按秒）：");T.beats.forEach(function(b){L.push("- （"+b.a+"–"+b.b+"）"+(b.b-b.a)+" 秒｜"+b.scene+"｜"+b.people+"｜"+b.objects+"｜"+b.acting+"｜核心："+b.core)})}
+  var kept=(T.proposals||[]).filter(function(p){return dec[p.id]!=="drop"});
+  if(kept.length){L.push("");L.push("保留的导演提案：");kept.forEach(function(p){L.push("- "+(p.where?p.where+"：":"")+p.text)})}
+  var annos=[];
+  ((S.ep&&S.ep.annotations)||[]).forEach(function(a){annos.push("集核心"+(a.quote?"“"+a.quote+"”":"")+" → "+a.note)});
+  segs().forEach(function(s){var g=S.seg&&S.seg[s.code];((g&&g.annotations)||[]).forEach(function(a){annos.push(s.code+(a.quote?"“"+a.quote+"”":"")+" → "+a.note)})});
+  if(annos.length){L.push("");L.push("人工标注（原话）：");annos.forEach(function(a){L.push("- "+a)})}
+  L.push("");
+  L.push("交接：以上为已确认的事实，导演 skill 写详稿和投喂版时不重新决定；新的想法只能标“提案”。");
+  return L.join("\n");
+}
+function directorPrompt(){
+  return ["/director-video-prompt","项目："+(S.title||"")+"。剧本见附件。","目标：即梦 Seedance 2.5，单段 ≤15 秒，图片写 @图片N。","本次重点：按下面的剧情核心提示词写导演详稿和投喂版，里面的决定当作已确认的事实。","",composePrompt()].join("\n");
+}
+function viewPrompt(){
+  var done=nodeStatus("n11").k==="done";
+  var h=ephead("剧情核心提示词","","集核心、段核心、四张表、你留下的提案和你的标注原话，合成一份。复制或下载以后，交给导演 skill。");
+  h+='<section class="sec" id="sec-prompt" data-anchor data-label="提示词"><div class="sh"><h3>剧情核心提示词</h3><span class="count">'+composePrompt().length+' 字</span><span class="sp"></span><button type="button" class="btn pri sm" data-action="copy" data-what="prompt">复制</button><button type="button" class="btn out sm" data-action="download">下载成 .md 文件</button></div>';
+  if(!done) h+='<div class="decide"><b>前面还有没走完的步骤</b>下面是到目前为止的内容，没定的地方写着“（未选）”或者缺表。</div>';
+  h+='<pre class="prompt" id="promptOut">'+esc(composePrompt())+'</pre></section>';
+  h+='<section class="sec" id="sec-hand" data-anchor data-label="交给导演 skill"><div class="sh"><h3>交给导演 skill</h3><span class="count">'+(S.handedOff?"已复制过":"")+'</span><span class="sp"></span><button type="button" class="btn pri sm" data-action="copy" data-what="director">复制开始提示词</button></div><p class="note">开一个新对话，把剧本附上，再把这段贴进去；导演 skill 会把这里的决定当作已经确认的事实来写详稿和投喂版。</p><pre class="prompt" id="dirOut">'+esc(directorPrompt())+'</pre></section>';
+  return h;
+}
+
+// ---------- 调用 Claude ----------
+function ctx(opts){
+  opts=opts||{};
+  var L=["剧名："+(S.title||""),"总时长："+(S.duration||"")+" 秒","剧本分段："];
+  segs().forEach(function(s){L.push("【"+s.code+" "+s.name+" "+s.a+"–"+s.b+" 秒】"+(s.text||""))});
+  if(epChosen()) L.push("","集核心（已选）："+epText());
+  var ch=segs().filter(function(s){return segChosen(s.code)});
+  if(ch.length&&opts.withSeg!==false){L.push("","已选段核心：");ch.forEach(function(s){L.push(s.code+"："+segChosen(s.code).text)})}
+  return L.join("\n");
+}
+function annoText(scope, extra){
+  var list=annosOf(scope);
+  var cands=scope==="ep"?((S.ep&&S.ep.candidates)||[]):(((S.seg&&S.seg[scope.slice(4)])||{}).candidates||[]);
+  var L=[];
+  list.forEach(function(a){var c=cands.filter(function(x){return x.id===a.cand})[0];L.push("- 针对候选“"+(c?c.text:"")+"”"+(a.quote?"里的“"+a.quote+"”":"")+"："+a.note)});
+  cands.filter(function(c){return c.own}).forEach(function(c){L.push("- 用户自己写的核心（可以借它的方向）："+c.text)});
+  if(extra) L.push("- 用户这次的要求："+extra);
+  return L.length?("\n\n用户的标注和要求（硬条件）：\n"+L.join("\n")):"";
+}
+var CAND_SHAPE='{"id":"A","text":"一句核心（不超过60字）","person":"人","object":"看得见的东西","action":"反复做的动作","change":"最后的变化","step":"是集核心里的哪一步","effect":"选它会变：……"}';
+function buildPrompt(node, opts){
+  opts=opts||{};
+  if(node==="n01") return METHOD+"\n\n下面是一个短片剧本。按剧本自己的分段拆开，段号用 01A、01B… 依次编；a、b 是这一段的起止秒，首尾相接；text 用一两句话写这段发生了什么，保留台词原话。输出 JSON：{\"title\":\"剧名和集数\",\"duration\":120,\"segments\":[{\"code\":\"01A\",\"name\":\"两到四个字\",\"a\":0,\"b\":12,\"text\":\"……\"}]}\n\n剧本：\n"+String(S.script.raw||"").slice(0,40000);
+  if(node==="n02") return METHOD+"\n\n"+ctx({withSeg:false})+"\n\n把剧本里已经写定的东西和还空着、需要导演设计的地方分开。已定：剧本写死的事件、台词、字幕、时长、地点。空着：谁先动、怎么演、东西在哪、最后去哪这类剧本没写的。各 6–12 条，seg 写段号，全片的写“全片”。输出 JSON：{\"fixed\":[{\"text\":\"……\",\"seg\":\"01E\"}],\"open\":[{\"text\":\"一句问题\",\"seg\":\"01C\"}]}";
+  if(node==="n03") return METHOD+"\n\n"+ctx({withSeg:false})+annoText("ep",opts.extra)+"\n\n为这一集写 3 个集核心候选，方向要真的拉得开：一个偏情感和物件，一个偏人物的日常习惯，一个偏主旨。每个都要过能拍测试。tilt 写方向，step 留空。输出 JSON：{\"candidates\":["+CAND_SHAPE.replace('"id":"A"','"id":"A","tilt":"情感向"')+"]}，id 依次 A、B、C。";
+  if(node==="n05") return METHOD+"\n\n"+ctx()+"\n\n为下面这些段各写 3 个段核心候选："+opts.codes.join("、")+"。段核心必须是集核心里的一步，step 写清是哪一步；要和前后段接得上。输出 JSON：{\"segments\":[{\"code\":\"01A\",\"candidates\":["+CAND_SHAPE+"]}]}，每段 id 依次 A、B、C。";
+  if(node==="seg1"){
+    var s=segBy(opts.code);
+    return METHOD+"\n\n"+ctx()+annoText("seg:"+opts.code,opts.extra)+"\n\n重新为这一段写 3 个段核心候选："+s.code+" "+s.name+"（"+s.a+"–"+s.b+" 秒）。段核心必须是集核心里的一步，step 写清是哪一步；要和前后段已选的段核心接得上。输出 JSON：{\"candidates\":["+CAND_SHAPE+"]}，id 依次 A、B、C。";
+  }
+  if(node==="n07") return METHOD+"\n\n"+ctx()+"\n\n把各段已选的段核心按顺序连读，检查三件事：1) 每段是不是集核心里的一步；2) 连起来是不是一步步往前走，有没有跳步、重复、断掉；3) 每句能不能拍。没问题就 issues 为空。输出 JSON：{\"ok\":true,\"summary\":\"一句话结论\",\"issues\":[{\"code\":\"01C\",\"problem\":\"……\",\"fix\":\"建议改成……\"}]}";
+  if(node==="n08"){
+    var fix=opts.fix?("\n\n上一版检查出的漏洞（这一版必须补上）：\n"+opts.fix):"";
+    return METHOD+"\n\n"+ctx()+fix+"\n\n按集核心和各段核心写四张表、全片规矩和提案。\n物件：贯穿全片的 3–6 样东西，每件写在核心里是什么、按秒的出现和当时的样子、最后在哪（必须交代）。\n人物：每段一行。\n场景：每个地点写在核心里干什么、出现在哪几段、里面放什么、东西在哪。\n节拍：按秒排，首尾相接盖满 0 到 "+(S.duration||120)+" 秒，每拍 2–8 秒，写场景、人、物、怎么演（看得见的动作）、核心走到哪一步、张力 0–10。\n规矩：4–8 条全片都要守的规矩。\n提案：你在剧本上额外加的设计，每条都能删，写清在哪、为什么。\n输出 JSON：{\"rules\":[\"……\"],\"props\":[{\"name\":\"……\",\"meaning\":\"……\",\"events\":[{\"t\":46,\"what\":\"开始写\"}],\"end\":\"……\"}],\"people\":[{\"seg\":\"01A\",\"age\":\"……\",\"want\":\"……\",\"doing\":\"……\",\"notDoing\":\"……\",\"him\":\"……\"}],\"scenes\":[{\"name\":\"……\",\"role\":\"……\",\"segs\":\"01A、01D\",\"contents\":\"……\"}],\"beats\":[{\"a\":0,\"b\":5,\"scene\":\"……\",\"people\":\"……\",\"objects\":\"……\",\"acting\":\"……\",\"core\":\"……\",\"tension\":2}],\"proposals\":[{\"id\":\"p1\",\"text\":\"……\",\"where\":\"01B\",\"why\":\"……\"}]}";
+  }
+  return "";
+}
+var ERR={not_granted:"你没有允许这个页面调用 Claude，所以这一步没跑。重新打开页面可以再选一次。",rate_limited:"调用太频繁了，等一会儿再点。",cancelled:"已停止。",invalid_json:"Claude 这次的回答格式不对，再点一次试试；还不行就少要一点内容。",prompt_too_large:"剧本太长了，先删掉不需要的部分再试。",sampling_disabled:"这个账号现在不能从页面调用 Claude。",refused:"Claude 拒绝了这次请求，换个说法再试。",session_expired:"登录过期了，刷新页面再试。"};
+function errMsg(e){return ERR[e&&e.code]||("没跑成："+((e&&e.message)||"未知错误")+"。再点一次试试。")}
+async function ask(node, prompt, opts){
+  if(!sample){toast("在这里不能调用 Claude，请在 Claude 里打开这个页面。");throw {code:"unavailable"}}
+  var ctl=new AbortController();
+  running={node:node,ctl:ctl}; liveText=""; renderMast(); renderView(); renderBar(); renderRail(); afterRender();
+  try{
+    return await sample.json(prompt,{signal:ctl.signal,modelTier:(opts&&opts.tier)||"default",cache:(opts&&opts.fresh)?false:true,onText:function(u){liveText=u.text;var l=$("liveN");if(l)l.textContent=runText()}});
+  } finally { running=null; liveText=""; }
+}
+function cleanCands(list){return arr(list).filter(function(c){return c&&c.text}).slice(0,4).map(function(c,i){return {id:String.fromCharCode(65+i),tilt:c.tilt||"",text:String(c.text),person:c.person||"",object:c.object||"",action:c.action||"",change:c.change||"",step:c.step||"",effect:c.effect||""}})}
+
+async function runNode(node, opts){
+  opts=opts||{}; var ok=false;
+  try{
+    if(node==="n01"){
+      var r=await ask("n01",buildPrompt("n01"),{tier:"default"});
+      var sg=arr(r.segments).map(function(s,i){return {code:s.code||("01"+String.fromCharCode(65+i)),name:s.name||"",a:+s.a||0,b:+s.b||0,text:s.text||""}});
+      if(!sg.length) throw {message:"没有读出段落"};
+      S.script.segments=sg; if(r.title&&!S.title) S.title=r.title; S.duration=+r.duration||sg[sg.length-1].b;
+      S.split=null;S.ep=null;S.seg={};S.test=null;S.tables=null;S.checks=null;S.decisions={};S.curve=[];
+      ui.view="ep"; ui.scrollTo="sec-script"; await commit("读剧本 · "+sg.length+" 段");
+    } else if(node==="n02"){
+      var r2=await ask("n02",buildPrompt("n02"));
+      S.split={fixed:arr(r2.fixed),open:arr(r2.open)}; ui.scrollTo="sec-split"; await commit("已定和空着");
+    } else if(node==="n03"){
+      var r3=await ask("n03",buildPrompt("n03",opts),{fresh:opts.fresh});
+      var keepOwn=((S.ep&&S.ep.candidates)||[]).filter(function(c){return c.own});
+      S.ep=S.ep||{annotations:[]}; S.ep.candidates=cleanCands(r3.candidates).concat(keepOwn); S.ep.chosen=null; S.ep.annotations=S.ep.annotations||[];
+      ui.view="ep"; ui.scrollTo="sec-ep"; await commit("集核心候选");
+    } else if(node==="n05"){
+      var codes=segs().filter(function(s){var g=S.seg&&S.seg[s.code];return !(g&&g.candidates&&g.candidates.length)||segStale(s.code)}).map(function(s){return s.code});
+      if(!codes.length){toast("每一段都已经有候选了");return false}
+      var r5=await ask("n05",buildPrompt("n05",{codes:codes}),{tier:"default"});
+      arr(r5.segments).forEach(function(x){ if(codes.indexOf(x.code)<0) return; var g=segState(x.code); g.candidates=cleanCands(x.candidates).concat((g.candidates||[]).filter(function(c){return c.own})); g.chosen=null; g.basedOn=epText(); });
+      ui.view="seg"; ui.scrollTo="seg-"+codes[0]; await commit("段核心候选 · "+codes.length+" 段");
+    } else if(node==="seg1"){
+      var code=opts.code, r6=await ask("seg1",buildPrompt("seg1",opts),{fresh:opts.fresh});
+      var g=segState(code); g.candidates=cleanCands(r6.candidates).concat((g.candidates||[]).filter(function(c){return c.own})); g.chosen=null; g.basedOn=epText();
+      ui.open[code]=true; ui.scrollTo="seg-"+code; await commit(code+" 重新生成");
+    } else if(node==="n07"){
+      var r7=await ask("n07",buildPrompt("n07"),{fresh:opts.fresh});
+      S.test={ok:!!r7.ok,summary:r7.summary||"",issues:arr(r7.issues),basedOn:segsHash()}; ui.view="tables"; ui.scrollTo="sec-test"; await commit("能拍测试");
+    } else if(node==="n08"){
+      var r8=await ask("n08",buildPrompt("n08",opts),{tier:"complex",fresh:opts.fresh});
+      var beats=arr(r8.beats).map(function(b){return {a:+b.a,b:+b.b,scene:b.scene||"",people:b.people||"",objects:b.objects||"",acting:b.acting||"",core:b.core||"",tension:+b.tension}});
+      var props=arr(r8.proposals).map(function(p,i){return {id:p.id||("p"+(i+1)),text:p.text||"",where:p.where||"",why:p.why||""}});
+      S.tables={rules:arr(r8.rules),props:arr(r8.props),people:arr(r8.people),scenes:arr(r8.scenes),beats:beats,proposals:props,basedOn:segsHash(),at:Date.now()};
+      S.checks=null; S.decisions={}; ui.view="tables"; ui.scrollTo="sec-props"; await commit("四张表 · "+beats.length+" 拍");
+    } else if(node==="n09"){
+      S.checks={issues:runChecks(),basedOn:S.tables.at}; ui.view="tables"; ui.scrollTo="sec-check"; await commit("自动检查 · "+S.checks.issues.length+" 处");
+    }
+    ok=true;
+  }catch(e){ if(e&&e.code!=="unavailable") toast(errMsg(e)); }
+  render();
+  return ok;
+}
+function runChecks(){
+  var T=S.tables, issues=[], D=S.duration||120, beats=(T.beats||[]).slice().sort(function(a,b){return a.a-b.a});
+  if(!beats.length) issues.push({where:"节拍",text:"节拍表是空的",fix:"重写四张表"});
+  if(beats.length&&beats[0].a!==0) issues.push({where:"节拍",text:"第一拍不是从 0 秒开始，而是 "+beats[0].a+" 秒",fix:"补上开头"});
+  for(var i=1;i<beats.length;i++){ if(beats[i].a!==beats[i-1].b) issues.push({where:"节拍",text:"第 "+beats[i-1].b+" 秒和第 "+beats[i].a+" 秒之间"+(beats[i].a>beats[i-1].b?"空了一段":"重叠了"),fix:"让两拍首尾相接"}); }
+  if(beats.length&&beats[beats.length-1].b!==D) issues.push({where:"节拍",text:"最后一拍停在 "+beats[beats.length-1].b+" 秒，全片是 "+D+" 秒",fix:"补到片尾"});
+  beats.forEach(function(b){ if(!b.core||!String(b.core).trim()) issues.push({where:"节拍 "+b.a+"–"+b.b+" 秒",text:"“核心走到哪”是空的",fix:"这一拍要么说清推进了哪一步，要么删掉或并进别的拍"}); });
+  (T.props||[]).forEach(function(p){ if(!p.end||/[？?]|未|不明/.test(p.end)) issues.push({where:"物件 · "+p.name,text:"最后去哪没有交代",fix:"写清它最后在谁手上、在哪"}); });
+  segs().forEach(function(s){ if(!segChosen(s.code)) issues.push({where:s.code,text:"这一段还没选段核心",fix:"回到段核心页选一个"}); });
+  beats.forEach(function(b){ if(BANNED.test(b.acting||"")) issues.push({where:"节拍 "+b.a+"–"+b.b+" 秒",text:"“怎么演”里有拍不出来的词",fix:"换成手上的动作或看得见的结果"}); });
+  return issues;
+}
+function goNode(id){
+  var g=NODE_GO[id]; ui.view=g[0];
+  var anchor=g[1];
+  if(!anchor&&(id==="n05"||id==="n06")){var p=firstPendingSeg(); anchor=p?"seg-"+p.code:"view-top"}
+  ui.scrollTo=anchor||"view-top"; render();
+}
+function runNext(){
+  var x=nextNode();
+  if(!x){goNode("n12");return}
+  var n=x.n, s=x.s;
+  if(n.kind==="human"||s.k==="wait"||n.id==="n11"||n.id==="n12"){goNode(n.id);toast("轮到你："+n.label);return}
+  if(n.id==="n05"&&!epChosen()){goNode("n04");return}
+  goNode(n.id); runNode(n.id);
+}
+
+// ---------- 保存（db） ----------
+async function saveProject(){
+  if(!db||!pid) return;
+  var data={title:S.title||"",updatedAt:Date.now(),json:JSON.stringify(S)};
+  writing=writing.then(function(){return db.doc("projects/"+pid).set(data)}).catch(function(e){toast("保存失败："+((e&&e.message)||e))});
+  return writing;
+}
+async function commit(label){
+  S.updatedAt=Date.now();
+  await saveProject();
+  if(!db||!pid) return;
+  var n=(checkpoints[0]&&checkpoints[0].n||0)+1;
+  try{ await db.collection("projects/"+pid+"/checkpoints").add({n:n,label:label,at:Date.now(),json:JSON.stringify(S)}); }catch(e){}
+}
+function listenProject(id, keepState){
+  if(unsubProject) unsubProject(); if(unsubChecks) unsubChecks();
+  pid=id; if(!keepState){S=null; ui.view=null; ui.open={}} checkpoints=[];
+  try{ localStorage.setItem("jqhx.pid",id) }catch(e){}
+  unsubProject=db.doc("projects/"+id).onSnapshot(function(snap){
+    if(snap.metadata&&snap.metadata.hasPendingWrites) return;
+    var d=snap.exists?snap.data():null; if(!d||!d.json) return;
+    try{ var incoming=JSON.parse(d.json); if(!S||JSON.stringify(S)!==d.json){ S=incoming; render(); } }catch(e){}
+  },function(){});
+  unsubChecks=db.collection("projects/"+id+"/checkpoints").orderBy("n","desc").limit(12).onSnapshot(function(q){
+    checkpoints=q.docs.map(function(d){var x=d.data();return {id:d.id,n:x.n,label:x.label,at:x.at,json:x.json}}); if(S&&!ui.newProj){renderMast()}
+  },function(){});
+}
+
+// ---------- 交互 ----------
+async function copyText(text, el){
+  try{await navigator.clipboard.writeText(text);toast("已复制");return true}
+  catch(e){ if(el){var r=document.createRange();r.selectNodeContents(el);var s=window.getSelection();s.removeAllRanges();s.addRange(r);} toast(el?"没能直接复制，已帮你选中文字，按 Ctrl+C 复制":"没能复制"); return false }
+}
+document.addEventListener("mouseup",function(ev){
+  var t=ev.target.closest&&ev.target.closest(".ctext[data-cand]"); var sel=window.getSelection&&String(window.getSelection()||"").trim();
+  if(t&&sel) ui.lastSel={scope:t.getAttribute("data-scope"),cand:t.getAttribute("data-cand"),text:sel};
+});
+document.addEventListener("input",function(ev){ var f=ev.target.closest&&ev.target.closest(".composer"); if(f&&ev.target.tagName==="TEXTAREA") ui.drafts[f.getAttribute("data-scope")]=ev.target.value; });
+document.addEventListener("change",function(ev){
+  if(ev.target&&ev.target.id==="projSel"&&ev.target.value){ ui.newProj=false; listenProject(ev.target.value); render(); }
+});
+document.addEventListener("toggle",function(ev){ if(ev.target.classList&&ev.target.classList.contains("vlog")) ui.vlogOpen=ev.target.open; },true);
+document.addEventListener("submit",async function(ev){
+  var f=ev.target; ev.preventDefault();
+  if(f.classList.contains("annoForm")){
+    var note=f.querySelector("[name=note]").value.trim(); if(!note) return;
+    var quote=f.querySelector("[name=quote]").value.trim(), sc=f.getAttribute("data-scope");
+    var holder=sc==="ep"?S.ep:segState(sc.slice(4)); holder.annotations=holder.annotations||[];
+    holder.annotations.push({cand:f.getAttribute("data-cand"),quote:quote,note:note,at:Date.now()});
+    ui.anno=null; render(); await commit("标注 · "+(quote||"一条意见")); toast("标注存好了，下次重新生成会照着改"); return;
+  }
+  if(f.classList.contains("composer")){
+    var sc2=f.getAttribute("data-scope"), extra=(ui.drafts[sc2]||"").trim();
+    var ok=sc2==="ep"?await runNode("n03",{extra:extra,fresh:true}):await runNode("seg1",{code:sc2.slice(4),extra:extra,fresh:true});
+    if(ok){ui.drafts[sc2]="";render()} return;
+  }
+  if(f.id==="npForm"){
+    var title=$("npTitle").value.trim(), raw=$("npScript").value.trim(); if(!title||!raw) return;
+    var id="p"+Date.now().toString(36);
+    S={v:1,title:title,duration:0,script:{raw:raw,segments:[]},seg:{},curve:[],decisions:{}};
+    pid=id; ui.newProj=false; ui.view="ep"; ui.open={};
+    await saveProject(); listenProject(id,true); render();
+    runNode("n01");
+  }
+});
+document.addEventListener("click",async function(ev){
+  var b=ev.target.closest&&ev.target.closest("[data-action]"); if(!b||b.disabled) return;
+  var a=b.getAttribute("data-action");
+  if(a==="jump"){ev.preventDefault();var el=$(b.getAttribute("data-to"));if(el)el.scrollIntoView({block:"start"});return}
+  if(a==="view"){ui.view=b.getAttribute("data-view");ui.anno=null;ui.scrollTo=b.getAttribute("data-to")||"view-top";render();return}
+  if(a==="goseg"){ui.view="seg";ui.open[b.getAttribute("data-code")]=true;ui.scrollTo="seg-"+b.getAttribute("data-code");render();return}
+  if(a==="new-project"){ui.newProj=true;render();return}
+  if(a==="cancel-new"){ui.newProj=false;render();return}
+  if(a==="run-next"){runNext();return}
+  if(a==="stop"){if(running)running.ctl.abort();return}
+  if(a==="run"){
+    var nd=b.getAttribute("data-node"), opts={fresh:true};
+    if(nd==="n01"&&segs().length){S.script.segments=[]}
+    if(nd==="n08"&&b.getAttribute("data-fix")&&S.checks) opts.fix=S.checks.issues.map(function(x){return "- "+x.where+"："+x.text+"（"+x.fix+"）"}).join("\n");
+    runNode(nd,opts);return;
+  }
+  if(a==="regen"){var sc=b.getAttribute("data-scope"); if(sc==="ep") runNode("n03",{fresh:true}); else runNode("seg1",{code:sc.slice(4),fresh:true}); return}
+  if(a==="reopen"){ui.open[b.getAttribute("data-code")]=true;render();return}
+  if(a==="collapse"){ui.open[b.getAttribute("data-code")]=false;ui.anno=null;ui.scrollTo="seg-"+b.getAttribute("data-code");render();return}
+  if(a==="choose"){
+    var scope=b.getAttribute("data-scope"), cid=b.getAttribute("data-cand");
+    if(scope==="ep"){var changed=S.ep.chosen&&S.ep.chosen!==cid; S.ep.chosen=cid; ui.anno=null; render(); await commit("集核心选 "+cid+(changed?"（改过）":"")); toast(changed?"集核心改了，各段的段核心标成了“待重算”":"集核心定了。下一步：给每一段写段核心候选"); return}
+    var code=scope.slice(4), g=segState(code); g.chosen=cid; g.basedOn=g.basedOn||epText(); ui.open[code]=false; ui.anno=null;
+    var nx=firstPendingSeg();
+    ui.scrollTo=nx?"seg-"+nx.code:"seg-"+code; render(); await commit(code+" 段核心选 "+cid);
+    toast(nx?(code+" 定了，接着看 "+nx.code):"段核心都选好了。下一步：到“四张表”连起来读");
+    return;
+  }
+  if(a==="copy-core"){var sc6=b.getAttribute("data-scope"),c6=segChosen(sc6.slice(4)); if(c6) copyText(c6.text); return}
+  if(a==="anno"){var sc2=b.getAttribute("data-scope"),cd=b.getAttribute("data-cand");var q=(ui.lastSel&&ui.lastSel.scope===sc2&&ui.lastSel.cand===cd)?ui.lastSel.text:"";ui.anno={scope:sc2,cand:cd,quote:q};render();var n=$("an");if(n)n.focus();return}
+  if(a==="anno-cancel"){ui.anno=null;render();return}
+  if(a==="del-anno"){var sc3=b.getAttribute("data-scope"),idx=+b.getAttribute("data-i");var lst=sc3==="ep"?S.ep.annotations:segState(sc3.slice(4)).annotations;lst.splice(idx,1);render();await commit("删除一条标注");return}
+  if(a==="own"){
+    var sc4=b.getAttribute("data-scope"), txt=(ui.drafts[sc4]||"").trim(); if(!txt){toast("先在输入框里写下你自己的核心");return}
+    var holder=sc4==="ep"?S.ep:segState(sc4.slice(4));
+    var k=(holder.candidates||[]).filter(function(c){return c.own}).length+1;
+    holder.candidates=(holder.candidates||[]).concat([{id:"W"+k,own:true,text:txt,person:"",object:"",action:"",change:"",step:"",effect:""}]); if(sc4!=="ep") holder.basedOn=holder.basedOn||epText();
+    ui.drafts[sc4]=""; render(); await commit("写了自己的核心"); toast("存好了，点“选这个”就用你写的"); return;
+  }
+  if(a==="del-own"){var sc5=b.getAttribute("data-scope"),cd5=b.getAttribute("data-cand");var h5=sc5==="ep"?S.ep:segState(sc5.slice(4));h5.candidates=h5.candidates.filter(function(c){return c.id!==cd5});if(h5.chosen===cd5)h5.chosen=null;render();await commit("删除自写核心");return}
+  if(a==="decide"){S.decisions=S.decisions||{};S.decisions[b.getAttribute("data-id")]=b.getAttribute("data-v");render();await saveProject();if(nodeStatus("n10").k==="done"){await commit("取舍提案");toast("提案都取舍好了。下一步：剧情核心提示词")}return}
+  if(a==="decide-all"){S.decisions=S.decisions||{};(S.tables.proposals||[]).forEach(function(p){if(!S.decisions[p.id])S.decisions[p.id]="keep"});render();await commit("取舍提案");toast("提案都取舍好了。下一步：剧情核心提示词");return}
+  if(a==="copy"){
+    var dir=b.getAttribute("data-what")==="director";
+    await copyText(dir?directorPrompt():composePrompt(), $(dir?"dirOut":"promptOut"));
+    if(dir&&!S.handedOff){S.handedOff=true;render();await commit("交给导演 skill");}
+    return;
+  }
+  if(a==="download"){
+    if(!downloads){toast("这里不能下载，用“复制”吧");return}
+    try{var r2=await downloads.save({filename:"剧情核心提示词-"+(S.title||"项目").replace(/[\\\/:*?"<>|《》]/g,"")+".md",data:composePrompt()}); if(r2&&r2.status==="saved") toast("已保存");}catch(e){ if(!(e&&e.code==="declined")) toast("没能下载："+((e&&e.message)||"")); }
+    return;
+  }
+  if(a==="restore-cp"){var c=checkpoints.filter(function(x){return x.id===b.getAttribute("data-cp")})[0];if(!c)return;S=JSON.parse(c.json);ui.open={};ui.view=defaultView();render();await commit("回到 v"+c.n);toast("已回到 v"+c.n+"，另存成了新的一版");return}
+  if(a==="fork-cp"){var c2=checkpoints.filter(function(x){return x.id===b.getAttribute("data-cp")})[0];if(!c2)return;var st=JSON.parse(c2.json);st.title=(st.title||"")+" · 分叉 v"+c2.n;var nid="p"+Date.now().toString(36);S=st;pid=nid;ui.open={};ui.view=defaultView();await saveProject();listenProject(nid,true);render();await commit("从 v"+c2.n+" 分叉");toast("已分叉成新项目，原来的项目没动");return}
+});
+
+// ---------- 启动 ----------
+render();
+async function boot(){
+  var c=window.claude;
+  if(!c||!c.use){ui.connecting=false;render();return}
+  try{ var r=await Promise.all([c.use("db"),c.use("sample"),c.use("downloads")]); db=r[0];sample=r[1];downloads=r[2]; }catch(e){}
+  if(!db){ui.connecting=false;render();return}
+  var timer=setTimeout(function(){ if(ui.connecting){ui.connecting=false;render()} },10000);
+  db.collection("projects").onSnapshot(function(q){
+    clearTimeout(timer);
+    projects=q.docs.map(function(d){var x=d.data();return {id:d.id,title:x.title,updatedAt:x.updatedAt||0}}).sort(function(a,b){return b.updatedAt-a.updatedAt});
+    var wasConnecting=ui.connecting; ui.connecting=false;
+    if(!pid&&projects.length){ var last=null; try{last=localStorage.getItem("jqhx.pid")}catch(e){} var pick=projects.filter(function(p){return p.id===last})[0]||projects[0]; listenProject(pick.id); }
+    if(wasConnecting||!S) render(); else renderMast();
+  },function(){ clearTimeout(timer); ui.connecting=false; render(); });
+}
+boot();
+})();
+</script>

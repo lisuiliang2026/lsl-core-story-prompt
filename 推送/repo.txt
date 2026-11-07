@@ -1,0 +1,2 @@
+# GitHub 仓库地址：只认下面以 https:// 开头的那一行。仓库名不一样就改这一行。
+https://github.com/lisuiliang2026/lsl-core-story-prompt.git
